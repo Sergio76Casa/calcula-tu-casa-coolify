@@ -1,0 +1,9 @@
+Nombre plataforma
+
+Vamos a dividir el nombre de la empresa y el nombre de la landing page 
+El nombre empresa sera: LeadInmo AI
+El nombre landing page: ValorExacto.es
+
+Pero habra que mirar si se puede comprar el dominio o no de: ValorExacto.es , TuTasacionIA.es, PrecioVivienda.es y CalculaTuCasa.com
+
+Todo se va a crear con antigravity 
