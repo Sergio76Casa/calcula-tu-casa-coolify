@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { ValuationResult } from "./LoadingValuationStep";
-import type { PropertyDetails, EnergyCertificate } from "./PropertyDetailsStep";
+import type { PropertyDetails } from "./PropertyDetailsStep";
+import EnergyScale             from "@/components/EnergyScale";
 import { U }           from "@/lib/uiStrings";
 import type { Lang }   from "@/lib/translations";
 import { supabase }    from "@/lib/supabase";
@@ -42,44 +43,6 @@ function classifyGemini(text: string) {
     else                         strengths.push(s);
   }
   return { strengths, concerns, energy };
-}
-
-// ─── Escala certificado energético ───────────────────────────────────────────
-
-const ENERGY_SCALE = [
-  { l:"A", bg:"#166534", w:55 }, { l:"B", bg:"#15803d", w:62 },
-  { l:"C", bg:"#4d7c0f", w:69 }, { l:"D", bg:"#a16207", w:76 },
-  { l:"E", bg:"#9a3412", w:83 }, { l:"F", bg:"#b91c1c", w:90 },
-  { l:"G", bg:"#7f1d1d", w:100 },
-] as const;
-
-function EnergyScale({ cert }: { cert?: EnergyCertificate }) {
-  const active = cert && cert !== "pending" ? cert : null;
-  return (
-    <div className="space-y-1.5">
-      {ENERGY_SCALE.map(({ l, bg, w }) => {
-        const isUser = active === l;
-        return (
-          <div key={l} className="flex items-center gap-3 h-7">
-            <div className="flex items-center px-3 h-full text-white font-black text-sm"
-              style={{ width: `${w}%`, backgroundColor: bg,
-                clipPath: "polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)",
-                filter: isUser
-                  ? "drop-shadow(0 0 5px #34d399) drop-shadow(0 0 10px rgba(52,211,153,0.5))"
-                  : "none" }}>
-              {l}
-            </div>
-            {isUser && (
-              <span className="text-emerald-400 text-xs font-bold whitespace-nowrap"
-                style={{ textShadow: "0 0 8px rgba(52,211,153,0.8)" }}>
-                ← Tu propiedad
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 // ─── Bloque análisis Gemini ───────────────────────────────────────────────────
@@ -243,13 +206,11 @@ export default function ValuationDashboard({ result, details, address, lang = "e
           </div>
         </div>
 
-        {/* Certificado Energético — solo si el usuario lo indicó */}
-        {details.energyCertificate && details.energyCertificate !== "pending" && (
-          <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">⚡ Certificado Energético</p>
-            <EnergyScale cert={details.energyCertificate} />
-          </div>
-        )}
+        {/* Certificado Energético — siempre visible, letra del usuario resaltada */}
+        <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">⚡ Certificado Energético</p>
+          <EnergyScale cert={details.energyCertificate} />
+        </div>
 
         {/* Análisis Gemini — 3 bloques temáticos */}
         <GeminiBlock icon="✅" title="Puntos Fuertes · Gemini IA"       items={strengths} theme="emerald" />

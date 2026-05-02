@@ -38,29 +38,6 @@ function energyImpactMsg(cert: string): string {
   return "Baja eficiencia — puede suponer un descuento de hasta un 5% en el precio de venta.";
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawEnergyScale(doc: any, x: number, startY: number, cert: string): number {
-  let y = startY;
-  const letters = ["A", "B", "C", "D", "E", "F", "G"];
-  for (let i = 0; i < letters.length; i++) {
-    const l   = letters[i];
-    const w   = 72 + i * 9;   // A=72 mm … G=126 mm (flecha de longitud creciente)
-    const bH  = 5;
-    const isU = l === cert;
-    doc.setFillColor(...ENERGY_RGB[l]);
-    doc.roundedRect(x, y, w, bH, 1, 1, "F");
-    doc.setFontSize(7); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
-    doc.text(l, x + 2.5, y + bH - 1);
-    if (isU) {
-      doc.setDrawColor(52, 211, 153); doc.setLineWidth(0.6);
-      doc.roundedRect(x, y, w, bH, 1, 1, "S");
-      doc.setTextColor(52, 211, 153); doc.setFontSize(6.5); doc.setFont("helvetica", "bold");
-      doc.text("◀ Tu propiedad", x + w + 2, y + bH - 1);
-    }
-    y += bH + 1.5;
-  }
-  return y;
-}
 
 // ─── Generador principal ──────────────────────────────────────────────────────
 
@@ -147,12 +124,21 @@ export async function generatePDF(
   if (cert && cert !== "pending") {
     doc.setDrawColor(...C.slate3); doc.setLineWidth(0.3);
     doc.line(ML, y, W - MR, y); y += 8;
+
     doc.setFontSize(8); doc.setTextColor(...C.slate5); doc.setFont("helvetica", "normal");
-    doc.text(t.energyImpact.toUpperCase(), ML, y); y += 6;
-    y = drawEnergyScale(doc, ML, y, cert) + 4;
-    doc.setFontSize(9); doc.setTextColor(...C.dark); doc.setFont("helvetica", "italic");
-    const impLines = doc.splitTextToSize(energyImpactMsg(cert), CW);
-    doc.text(impLines, ML, y); y += impLines.length * 5 + 6;
+    doc.text(t.energyImpact.toUpperCase(), ML, y); y += 7;
+
+    // Badge coloreado con la letra de calificación
+    doc.setFillColor(...ENERGY_RGB[cert]);
+    doc.roundedRect(ML, y, 12, 12, 2, 2, "F");
+    doc.setFontSize(14); doc.setTextColor(...C.white); doc.setFont("helvetica", "bold");
+    doc.text(cert, ML + 3.5, y + 9.5);
+
+    // Texto de impacto al lado del badge
+    doc.setFontSize(9); doc.setTextColor(...C.dark); doc.setFont("helvetica", "normal");
+    const impLines = doc.splitTextToSize(energyImpactMsg(cert), CW - 16);
+    doc.text(impLines, ML + 16, y + 7);
+    y += Math.max(14, impLines.length * 5) + 8;
   }
 
   // ── Argumentario ─────────────────────────────────────────────────────────
