@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import type { ValuationResult } from "./LoadingValuationStep";
-import type { PropertyDetails }  from "./PropertyDetailsStep";
-import { U }                     from "@/lib/uiStrings";
-import type { Lang }             from "@/lib/translations";
-import { supabase }              from "@/lib/supabase";
+import type { PropertyDetails, EnergyCertificate } from "./PropertyDetailsStep";
+import { U }           from "@/lib/uiStrings";
+import type { Lang }   from "@/lib/translations";
+import { supabase }    from "@/lib/supabase";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -18,41 +18,99 @@ interface ValuationDashboardProps {
 }
 interface Highlight { icon: string; text: string }
 
-// ─── Palabras clave → negrita en argumentario ─────────────────────────────────
-
-const BOLD_RE = /(reforma\s*integral?|sin ascensor|con ascensor|\d+\s*habitaciones?|jardín|parcela|buen estado|completamente\s+reformad[ao]|\d[\d.,]*\s*€|\d+\s*m²)/gi;
-
-// ─── Keyword → icono por frase del argumentario ───────────────────────────────
-
-const SENTENCE_ICONS: Array<[RegExp, string]> = [
-  [/reform|obra/i,         "🔨"],
-  [/ascensor/i,            "🛗"],
-  [/habitaci/i,            "🛏"],
-  [/jard[ií]n|parcela/i,  "🌿"],
-  [/precio|valor|rang/i,   "💰"],
-  [/m²|metro|superfici/i,  "📐"],
-  [/ubicaci|zona|barrio/i, "📍"],
-  [/mercado|venta|invers/i,"📊"],
-];
-
-function sentenceIcon(s: string): string {
-  for (const [re, icon] of SENTENCE_ICONS) if (re.test(s)) return icon;
-  return "💡";
-}
-
-// ─── Helpers de texto ─────────────────────────────────────────────────────────
+// ─── Helper negrita para marcadores **texto** ─────────────────────────────────
 
 function Bold({ text }: { text: string }) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
-  return <>{parts.map((p, i) => i % 2 === 1 ? <strong key={i} className="text-white font-semibold">{p}</strong> : p)}</>;
+  return <>{parts.map((p, i) => i % 2 === 1
+    ? <strong key={i} className="text-white font-semibold">{p}</strong>
+    : <span key={i}>{p}</span>
+  )}</>;
 }
 
-function BoldArg({ text }: { text: string }) {
-  const parts = text.split(BOLD_RE);
-  return <>{parts.map((p, i) => i % 2 === 1 ? <strong key={i} className="text-white font-semibold">{p}</strong> : p)}</>;
+// ─── Clasificador de frases Gemini ────────────────────────────────────────────
+
+const CONCERN_RE = /sin ascensor|a reformar|requiere|penaliz|desventaj|sin embargo|aunque/i;
+const ENERGY_RE  = /energi|certif|emisi|calificaci|co2|eficienci/i;
+
+function classifyGemini(text: string) {
+  const sentences = text.split(/\.\s+/).filter(s => s.trim().length > 12);
+  const energy: string[] = [], concerns: string[] = [], strengths: string[] = [];
+  for (const s of sentences) {
+    if      (ENERGY_RE.test(s))  energy.push(s);
+    else if (CONCERN_RE.test(s)) concerns.push(s);
+    else                         strengths.push(s);
+  }
+  return { strengths, concerns, energy };
 }
 
-// ─── Puntos fuertes / a mejorar ───────────────────────────────────────────────
+// ─── Escala certificado energético ───────────────────────────────────────────
+
+const ENERGY_SCALE = [
+  { l:"A", bg:"#166534", w:55 }, { l:"B", bg:"#15803d", w:62 },
+  { l:"C", bg:"#4d7c0f", w:69 }, { l:"D", bg:"#a16207", w:76 },
+  { l:"E", bg:"#9a3412", w:83 }, { l:"F", bg:"#b91c1c", w:90 },
+  { l:"G", bg:"#7f1d1d", w:100 },
+] as const;
+
+function EnergyScale({ cert }: { cert?: EnergyCertificate }) {
+  const active = cert && cert !== "pending" ? cert : null;
+  return (
+    <div className="space-y-1.5">
+      {ENERGY_SCALE.map(({ l, bg, w }) => {
+        const isUser = active === l;
+        return (
+          <div key={l} className="flex items-center gap-3 h-7">
+            <div className="flex items-center px-3 h-full text-white font-black text-sm"
+              style={{ width: `${w}%`, backgroundColor: bg,
+                clipPath: "polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)",
+                filter: isUser
+                  ? "drop-shadow(0 0 5px #34d399) drop-shadow(0 0 10px rgba(52,211,153,0.5))"
+                  : "none" }}>
+              {l}
+            </div>
+            {isUser && (
+              <span className="text-emerald-400 text-xs font-bold whitespace-nowrap"
+                style={{ textShadow: "0 0 8px rgba(52,211,153,0.8)" }}>
+                ← Tu propiedad
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Bloque análisis Gemini ───────────────────────────────────────────────────
+
+const G_STYLE = {
+  emerald: { card: "bg-emerald-500/5 border border-emerald-500/20", title: "text-emerald-400" },
+  amber:   { card: "bg-amber-500/5 border border-amber-500/20",     title: "text-amber-400"   },
+  blue:    { card: "bg-blue-500/5 border border-blue-500/20",       title: "text-blue-400"    },
+} as const;
+
+function GeminiBlock({ icon, title, items, theme }: {
+  icon: string; title: string; items: string[]; theme: keyof typeof G_STYLE;
+}) {
+  if (!items.length) return null;
+  const s = G_STYLE[theme];
+  return (
+    <div className={`${s.card} rounded-2xl p-5`}>
+      <p className={`text-xs font-bold uppercase tracking-wider mb-4 ${s.title}`}>{icon} {title}</p>
+      <ul className="space-y-3">
+        {items.map((sentence, i) => (
+          <li key={i} className="flex items-start gap-3 text-sm text-slate-300 leading-relaxed">
+            <span className="flex-shrink-0 mt-0.5">{icon}</span>
+            <span><Bold text={sentence.trim().replace(/\.?$/, ".")} /></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ─── Puntos fuertes / a mejorar (estáticos) ───────────────────────────────────
 
 function getHighlights(d: PropertyDetails): { pros: Highlight[]; cons: Highlight[] } {
   const pros: Highlight[] = [], cons: Highlight[] = [];
@@ -78,7 +136,7 @@ function getHighlights(d: PropertyDetails): { pros: Highlight[]; cons: Highlight
   return { pros, cons };
 }
 
-// ─── Subcomponente: barra de rango de mercado ─────────────────────────────────
+// ─── Barra rango de mercado ───────────────────────────────────────────────────
 
 function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) {
   const pct        = Math.round(((mid - min) / (max - min)) * 100);
@@ -99,7 +157,8 @@ function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) 
       <div className="relative h-10">
         <div className="absolute -translate-x-1/2 text-center" style={{ left: `${labelClamp}%` }}>
           <div className="w-px h-3 bg-emerald-400/70 mx-auto" />
-          <p className="text-emerald-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 12px rgba(52,211,153,0.7)" }}>
+          <p className="text-emerald-400 font-black text-sm whitespace-nowrap"
+            style={{ textShadow: "0 0 12px rgba(52,211,153,0.7)" }}>
             {mid.toLocaleString("es-ES")} €
           </p>
           <p className="text-emerald-400/60 text-[10px] uppercase tracking-wide whitespace-nowrap">Precio sugerido</p>
@@ -117,8 +176,8 @@ function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) 
 
 export default function ValuationDashboard({ result, details, address, lang = "es", onReset }: ValuationDashboardProps) {
   const { precio_sugerido: mid, rango_precios: { minimo: min, maximo: max }, argumentario_venta } = result;
-  const { pros, cons } = getHighlights(details);
-  const sentences = argumentario_venta.split(/\.\s+/).filter(s => s.trim().length > 12);
+  const { pros, cons }                   = getHighlights(details);
+  const { strengths, concerns, energy }  = classifyGemini(argumentario_venta);
   const tp = U(lang).pdf;
 
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -128,7 +187,6 @@ export default function ValuationDashboard({ result, details, address, lang = "e
     try {
       const { generatePDF } = await import("@/lib/generatePDF");
       await generatePDF(result, details, address, lang);
-      // fire-and-forget: mark PDF as downloaded in leads table
       supabase.rpc("set_pdf_downloaded", { p_propiedad_id: result.propiedad_id });
     } finally {
       setPdfLoading(false);
@@ -148,7 +206,7 @@ export default function ValuationDashboard({ result, details, address, lang = "e
           <p className="text-slate-400 text-sm mt-1 truncate">📍 {address}</p>
         </div>
 
-        {/* Precio principal + barra */}
+        {/* Precio + rango */}
         <div className="bg-slate-800/60 border border-emerald-500/20 rounded-2xl p-6 text-center backdrop-blur-sm">
           <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Valor de mercado estimado</p>
           <p className="text-6xl md:text-7xl font-black text-emerald-400 tabular-nums my-3"
@@ -159,7 +217,7 @@ export default function ValuationDashboard({ result, details, address, lang = "e
           <RangeBar min={min} mid={mid} max={max} />
         </div>
 
-        {/* Puntos fuertes / a mejorar */}
+        {/* Puntos fuertes / a considerar (análisis estático) */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5">
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-4">✅ Puntos fuertes</p>
@@ -185,20 +243,20 @@ export default function ValuationDashboard({ result, details, address, lang = "e
           </div>
         </div>
 
-        {/* Argumentario */}
-        <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">🤖 Análisis completo · Gemini IA</p>
-          <ul className="space-y-3">
-            {sentences.map((s, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-slate-300 leading-relaxed">
-                <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">{sentenceIcon(s)}</span>
-                <span><BoldArg text={s.trim().replace(/\.?$/, ".")} /></span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Certificado Energético — solo si el usuario lo indicó */}
+        {details.energyCertificate && details.energyCertificate !== "pending" && (
+          <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">⚡ Certificado Energético</p>
+            <EnergyScale cert={details.energyCertificate} />
+          </div>
+        )}
 
-        {/* PDF Download */}
+        {/* Análisis Gemini — 3 bloques temáticos */}
+        <GeminiBlock icon="✅" title="Puntos Fuertes · Gemini IA"       items={strengths} theme="emerald" />
+        <GeminiBlock icon="⚠️" title="Puntos a Considerar · Gemini IA"  items={concerns}  theme="amber"   />
+        <GeminiBlock icon="🌱" title="Análisis Energético · Gemini IA"  items={energy}    theme="blue"    />
+
+        {/* Descargar PDF */}
         <button type="button" onClick={handleDownloadPDF} disabled={pdfLoading}
           className="w-full py-4 border-2 border-slate-500/50 hover:border-slate-400 text-slate-300 hover:text-white font-bold text-base rounded-2xl transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50">
           <span aria-hidden="true">{pdfLoading ? "⏳" : "📄"}</span>

@@ -25,5 +25,9 @@ https://github.com/Sergio76Casa/calcula-tu-casa
 contraseña proyecto supabase LeadInmo AI
 WgU2jt5Hbfo7i532
 proyecto id npx : tltbhpgbqxlthumdnruk
+https://tltbhpgbqxlthumdnruk.supabase.co
+anon puplic: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsdGJocGdicXhsdGh1bWRucnVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY2MzksImV4cCI6MjA5MzI0MjYzOX0.9dq4QvT80NAASEl_41aoG_UG4WjpjdO5vtbf0bSK6ZA
 
-clave api IA studio CalculaTuCasa: AIzaSyDWCF06SN_n_YBRB70HTdQd_8Wt2lSCR40
+
+clave api IA studio CalculaTuCasa: 
+
