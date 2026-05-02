@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx supabase *)",
+      "Bash(curl -s -X POST https://tltbhpgbqxlthumdnruk.supabase.co/rest/v1/propiedades -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsdGJocGdicXhsdGh1bWRucnVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY2MzksImV4cCI6MjA5MzI0MjYzOX0.9dq4QvT80NAASEl_41aoG_UG4WjpjdO5vtbf0bSK6ZA' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsdGJocGdicXhsdGh1bWRucnVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjY2MzksImV4cCI6MjA5MzI0MjYzOX0.9dq4QvT80NAASEl_41aoG_UG4WjpjdO5vtbf0bSK6ZA' -H 'Content-Type: application/json' -H 'Prefer: return=representation' -d '{ *)",
+      "Bash(python -m json.tool)",
+      "Bash(curl *)"
+    ]
+  }
+}

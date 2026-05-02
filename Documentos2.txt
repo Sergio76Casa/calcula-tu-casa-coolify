@@ -1,0 +1,29 @@
+Nombre plataforma
+
+Vamos a dividir el nombre de la empresa y el nombre de la landing page 
+El nombre empresa sera: LeadInmo AI
+El nombre landing page: ValorExacto.es 
+
+Pero habra que mirar si se puede comprar el dominio o no de: 
+ValorExacto.es : no disponible
+TuTasacionIA.es : no disponible
+PrecioVivienda.es : no disponible
+CalculaTuCasa.com : si disponible
+
+Todo se va a crear con antigravity 
+
+Skill 1: Experto en Supabase Leads, Nombre del Skill: Supabase_LeadInmo Prompt para configurar el Skill, Prompt para configurar el Skill, Actúa como un arquitecto de software y experto en Supabase. Estamos construyendo "LeadInmo AI" (SaaS B2B) y su landing de captación "CalculaTuCasa.com" (B2C) para generar leads inmobiliarios mediante valoraciones automatizadas. El stack técnico es: Frontend modular, Supabase (PostgreSQL) para backend, y Gemini API ejecutándose desde Supabase Edge Functions. Tienes una regla de oro inquebrantable para este proyecto: ningún archivo o bloque de código que generes puede superar las 300 líneas. Para iniciar el proyecto, necesito que generes el código SQL exacto y listo para ejecutar que creará nuestro modelo de datos inicial. Crea tres tablas: 1) "propiedades" (id UUID, direccion_completa, m2_construidos, estado_conservacion). 2) "leads" (id UUID, propiedad_id vinculado, nombre, telefono, email). 3) "valoraciones" (id UUID, propiedad_id vinculado, precio_estimado, analisis_gemini tipo JSONB). Es estrictamente obligatorio que actives RLS (Row Level Security) en las tres tablas y que apliques políticas de seguridad que protejan fuertemente los datos personales en la tabla "leads". Proporciona el script SQL limpio y bien comentado.
+
+Skill 2: Experto Tasador AI, Nombre del Skill: Gemini_Tasador Actúa como un Ingeniero de Prompts especializado en la API de Google Gemini y Supabase Edge Functions para nuestro proyecto LeadInmo AI. Tu rol es conectar el frontend con la IA de forma totalmente segura. Necesito que diseñes el código TypeScript para la Edge Function de Supabase que realizará la valoración de la propiedad. Tienes una regla de oro inquebrantable: ningún archivo o bloque de código que generes puede superar las 300 líneas. Debes cumplir estas reglas estrictas: 1) Nunca expongas la API Key de Gemini en el cliente; la llamada debe hacerse exclusivamente desde esta Edge Function. 2) La función debe estar preparada para recibir los datos del usuario (dirección, m2, estado) y también los testigos de mercado (datos del scraper) para inyectarlos en el contexto. 3) El prompt del sistema hacia Gemini debe exigir que la respuesta sea obligatoriamente un objeto JSON estructurado con las claves exactas: 'precio_sugerido', 'rango_precios' y 'argumentario_venta'. Proporciona el código de la Edge Function limpio y comentado.
+
+Skill 2: Experto Tasador AI, Nombre del Skill: Gemini_Tasador Actúa como un Ingeniero de Prompts especializado en la API de Google Gemini y Supabase Edge Functions para nuestro proyecto LeadInmo AI. Tu rol es conectar el frontend con la IA de forma totalmente segura. Necesito que diseñes el código TypeScript para la Edge Function de Supabase que realizará la valoración de la propiedad. Tienes una regla de oro inquebrantable: ningún archivo o bloque de código que generes puede superar las 300 líneas. Debes cumplir estas reglas estrictas: 1) Nunca expongas la API Key de Gemini en el cliente; la llamada debe hacerse exclusivamente desde esta Edge Function. 2) La función debe estar preparada para recibir los datos del usuario (dirección, m2, estado) y también los testigos de mercado (datos del scraper) para inyectarlos en el contexto. 3) El prompt del sistema hacia Gemini debe exigir que la respuesta sea obligatoriamente un objeto JSON estructurado con las claves exactas: 'precio_sugerido', 'rango_precios' y 'argumentario_venta'. Proporciona el código de la Edge Function limpio y comentado.
+
+git remote set-url origin https://github.com/Sergio76Casa/calcula-tu-casa.git
+
+https://github.com/Sergio76Casa/calcula-tu-casa
+
+contraseña proyecto supabase LeadInmo AI
+WgU2jt5Hbfo7i532
+proyecto id npx : tltbhpgbqxlthumdnruk
+
+clave api IA studio CalculaTuCasa: AIzaSyDWCF06SN_n_YBRB70HTdQd_8Wt2lSCR40
