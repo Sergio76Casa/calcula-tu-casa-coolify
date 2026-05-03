@@ -60,13 +60,13 @@ export async function generatePDF(
 
   // ── Header ────────────────────────────────────────────────────────────────
   doc.setFillColor(11, 16, 29);
-  doc.rect(0, 0, W, 30, "F");
-  doc.addImage(LOGO_BASE64, "JPEG", ML, 2, 70, 22);
+  doc.rect(0, 0, W, 40, "F");
+  doc.addImage(LOGO_BASE64, "JPEG", ML, 4, 100, 32);
   doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "normal");
-  doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 10, { align: "right" });
+  doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 12, { align: "right" });
   doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "italic");
-  doc.text(t.subtitle, ML, 27);
-  y = 38;
+  doc.text(t.subtitle, ML, 37);
+  y = 48;
 
   // ── Título + dirección ────────────────────────────────────────────────────
   doc.setFontSize(18); doc.setTextColor(...C.dark); doc.setFont("helvetica", "bold");
