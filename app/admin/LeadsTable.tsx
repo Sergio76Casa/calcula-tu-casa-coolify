@@ -44,8 +44,8 @@ function Badge({ text, cls }: { text: string; cls: string }) {
   );
 }
 
-function Cell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-2 py-1.5 text-xs ${className}`}>{children}</td>;
+function Cell({ children, className = "", title }: { children: React.ReactNode; className?: string; title?: string }) {
+  return <td className={`px-2 py-1.5 text-xs ${className}`} title={title}>{children}</td>;
 }
 
 function exportCSV(rows: LeadRow[]) {
