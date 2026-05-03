@@ -90,7 +90,7 @@ export async function generatePDF(
   doc.text(stripEmoji(addrLines.join(" ")), ML, y); y += 6;
   
   const estado = { a_reformar: lang === "en" ? "needs work" : "a reformar", bueno: lang === "en" ? "good cond." : "buen estado", nuevo: lang === "en" ? "renovated" : "reformado" };
-  const detailStr = `📏 ${details.m2} m²   🏠 ${details.tipo === "piso" ? (lang === "en" ? "apartment" : lang === "ca" ? "pis" : "piso") : (lang === "en" ? "house" : "casa")}   ✨ ${estado[details.estado]}   🛌 ${details.habitaciones}${details.habitaciones >= 4 ? "+" : ""} hab.`;
+  const detailStr = `Superficie: ${details.m2} m²   |   Tipo: ${details.tipo === "piso" ? (lang === "en" ? "apartment" : lang === "ca" ? "pis" : "piso") : (lang === "en" ? "house" : "casa")}   |   Estado: ${estado[details.estado]}   |   Habitaciones: ${details.habitaciones}${details.habitaciones >= 4 ? "+" : ""}`;
   doc.text(detailStr, ML, y); y += 8;
 
   // ── Divisor ───────────────────────────────────────────────────────────────
