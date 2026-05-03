@@ -59,14 +59,17 @@ export async function generatePDF(
   let y      = 0;
 
   // ── Header ────────────────────────────────────────────────────────────────
+  const headerH = 55;
+  const logoW   = 120;
+  const logoH   = 38;
   doc.setFillColor(11, 16, 29);
-  doc.rect(0, 0, W, 40, "F");
-  doc.addImage(LOGO_BASE64, "JPEG", ML, 4, 100, 32);
+  doc.rect(0, 0, W, headerH, "F");
+  doc.addImage(LOGO_BASE64, "JPEG", (W - logoW) / 2, 6, logoW, logoH);
   doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "normal");
-  doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 12, { align: "right" });
+  doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 10, { align: "right" });
   doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "italic");
-  doc.text(t.subtitle, ML, 37);
-  y = 48;
+  doc.text(t.subtitle, W / 2, 50, { align: "center" });
+  y = 65;
 
   // ── Título + dirección ────────────────────────────────────────────────────
   doc.setFontSize(18); doc.setTextColor(...C.dark); doc.setFont("helvetica", "bold");
