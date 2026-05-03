@@ -47,6 +47,7 @@ export async function generatePDF(
   details:  PropertyDetails,
   address:  string,
   lang:     Lang,
+  userName?: string | null,
 ): Promise<void> {
   const { jsPDF } = await import("jspdf");
   const t = U(lang).pdf;
@@ -59,17 +60,27 @@ export async function generatePDF(
   let y      = 0;
 
   // ── Header ────────────────────────────────────────────────────────────────
-  const headerH = 55;
+  const headerH = 60; // Un poco más alto para el nombre
   const logoW   = 120;
   const logoH   = 38;
   doc.setFillColor(11, 16, 29);
   doc.rect(0, 0, W, headerH, "F");
   doc.addImage(LOGO_BASE64, "JPEG", (W - logoW) / 2, 6, logoW, logoH);
+  
   doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "normal");
   doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 10, { align: "right" });
-  doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "italic");
-  doc.text(t.subtitle, W / 2, 50, { align: "center" });
-  y = 65;
+  
+  // Nombre personalizado si existe
+  if (userName) {
+    doc.setFontSize(10); doc.setTextColor(...C.emerald); doc.setFont("helvetica", "bold");
+    doc.text(`EXCLUSIVO PARA: ${userName.toUpperCase()}`, W / 2, 48, { align: "center" });
+    doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "italic");
+    doc.text(t.subtitle, W / 2, 54, { align: "center" });
+  } else {
+    doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "italic");
+    doc.text(t.subtitle, W / 2, 50, { align: "center" });
+  }
+  y = headerH + 10;
 
   // ── Título + dirección ────────────────────────────────────────────────────
   doc.setFontSize(18); doc.setTextColor(...C.dark); doc.setFont("helvetica", "bold");
@@ -77,8 +88,9 @@ export async function generatePDF(
   doc.setFontSize(9); doc.setTextColor(...C.slate5); doc.setFont("helvetica", "normal");
   const addrLines = doc.splitTextToSize("📍 " + address, CW);
   doc.text(stripEmoji(addrLines.join(" ")), ML, y); y += 6;
+  
   const estado = { a_reformar: lang === "en" ? "needs work" : "a reformar", bueno: lang === "en" ? "good cond." : "buen estado", nuevo: lang === "en" ? "renovated" : "reformado" };
-  const detailStr = `${details.m2} m²  ·  ${details.tipo === "piso" ? (lang === "en" ? "apartment" : lang === "ca" ? "pis" : "piso") : (lang === "en" ? "house" : "casa")}  ·  ${estado[details.estado]}  ·  ${details.habitaciones}${details.habitaciones >= 4 ? "+" : ""} hab.`;
+  const detailStr = `📏 ${details.m2} m²   🏠 ${details.tipo === "piso" ? (lang === "en" ? "apartment" : lang === "ca" ? "pis" : "piso") : (lang === "en" ? "house" : "casa")}   ✨ ${estado[details.estado]}   🛌 ${details.habitaciones}${details.habitaciones >= 4 ? "+" : ""} hab.`;
   doc.text(detailStr, ML, y); y += 8;
 
   // ── Divisor ───────────────────────────────────────────────────────────────
@@ -95,7 +107,7 @@ export async function generatePDF(
   doc.setFontSize(30); doc.setTextColor(...C.emerald); doc.setFont("helvetica", "bold");
   doc.text(fmt(result.precio_sugerido), ML + 8, y + 24);
   doc.setFontSize(8); doc.setTextColor(...C.slate5); doc.setFont("helvetica", "normal");
-  doc.text("Gemini 2.5 Flash · datos reales del mercado", ML + 8, y + 33);
+  doc.text("IA Valuation Engine · Real-time market data", ML + 8, y + 33);
   y += 46;
 
   // ── Barra de rango ────────────────────────────────────────────────────────
@@ -122,7 +134,7 @@ export async function generatePDF(
   doc.text(t.max, W - MR, y, { align: "right" }); doc.text(fmt(max), W - MR, y + 4, { align: "right" });
   y += 12;
 
-  // ── Impacto Energético ────────────────────────────────────────────────────
+  // ── Impacto Energético (GRAFICO MEJORADO) ──────────────────────────────────
   const cert = details.energyCertificate;
   if (cert && cert !== "pending") {
     doc.setDrawColor(...C.slate3); doc.setLineWidth(0.3);
@@ -131,17 +143,40 @@ export async function generatePDF(
     doc.setFontSize(8); doc.setTextColor(...C.slate5); doc.setFont("helvetica", "normal");
     doc.text(t.energyImpact.toUpperCase(), ML, y); y += 7;
 
-    // Badge coloreado con la letra de calificación
-    doc.setFillColor(...ENERGY_RGB[cert]);
-    doc.roundedRect(ML, y, 12, 12, 2, 2, "F");
-    doc.setFontSize(14); doc.setTextColor(...C.white); doc.setFont("helvetica", "bold");
-    doc.text(cert, ML + 3.5, y + 9.5);
+    // Dibujar escala A-G
+    const letters = ["A", "B", "C", "D", "E", "F", "G"];
+    const startX  = ML;
+    const barW    = 40;
+    const barH    = 4.5;
+    const gap     = 1.2;
 
-    // Texto de impacto al lado del badge
+    letters.forEach((l, idx) => {
+      const currentY = y + (idx * (barH + gap));
+      const length   = barW + (idx * 5); // Cada barra un poco más larga
+      
+      // Color de la barra
+      doc.setFillColor(...ENERGY_RGB[l]);
+      doc.rect(startX, currentY, length, barH, "F");
+      
+      // Letra
+      doc.setFontSize(7); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+      doc.text(l, startX + 2, currentY + 3.5);
+
+      // Si es la del usuario, dibujamos el indicador
+      if (l === cert) {
+        doc.setDrawColor(...C.dark); doc.setLineWidth(0.5);
+        doc.line(startX + length + 2, currentY + barH/2, startX + length + 8, currentY + barH/2);
+        doc.setFontSize(9); doc.setTextColor(...C.dark);
+        doc.text("SU VIVIENDA", startX + length + 10, currentY + 3.5);
+      }
+    });
+
+    // Texto de impacto debajo del gráfico
+    y += (letters.length * (barH + gap)) + 6;
     doc.setFontSize(9); doc.setTextColor(...C.dark); doc.setFont("helvetica", "normal");
-    const impLines = doc.splitTextToSize(energyImpactMsg(cert), CW - 16);
-    doc.text(impLines, ML + 16, y + 7);
-    y += Math.max(14, impLines.length * 5) + 8;
+    const impLines = doc.splitTextToSize(energyImpactMsg(cert), CW);
+    doc.text(impLines, ML, y);
+    y += impLines.length * 5 + 8;
   }
 
   // ── Argumentario ─────────────────────────────────────────────────────────
@@ -163,3 +198,4 @@ export async function generatePDF(
 
   doc.save(`${t.filename}.pdf`);
 }
+

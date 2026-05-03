@@ -156,17 +156,28 @@ export default function ValuationDashboard({
     setPdfLoading(true);
     try {
       const { generatePDF } = await import("@/lib/generatePDF");
-      console.log("Intentando marcar PDF descargado para:", leadId ?? "sin ID");
+      
+      let userName = null;
       if (leadId) {
+        // 1. Marcar como descargado
         supabase
           .from("leads")
           .update({ pdf_downloaded: true })
           .eq("id", leadId)
           .then(({ error }) => {
-            if (error) console.log("Error de Supabase:", error);
+            if (error) console.log("Error marking PDF downloaded:", error);
           });
+
+        // 2. Recuperar el nombre para personalizar el PDF
+        const { data } = await supabase
+          .from("leads")
+          .select("nombre")
+          .eq("id", leadId)
+          .single();
+        if (data) userName = data.nombre;
       }
-      await generatePDF(result, details, address, lang);
+      
+      await generatePDF(result, details, address, lang, userName);
     } finally {
       setPdfLoading(false);
     }
