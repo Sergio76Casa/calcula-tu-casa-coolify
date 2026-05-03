@@ -65,13 +65,16 @@ export default function AdminDashboard() {
   const [checking, setChecking] = useState(true);
   const [leads,    setLeads]    = useState<LeadRow[]>([]);
   const [metrics,  setMetrics]  = useState<Metrics | null>(null);
+  const [abMode,   setAbMode]   = useState("random");
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data, error: err } = await supabase
+
+    // Cargar leads
+    const { data: leadsData, error: err } = await supabase
       .from("leads")
       .select(`
         id, created_at, nombre, telefono, telefono_final, email,
@@ -86,11 +89,34 @@ export default function AdminDashboard() {
       .order("created_at", { ascending: false });
 
     if (err) { setError("Error cargando datos: " + err.message); setLoading(false); return; }
-    const flat = (data as unknown as RawLead[]).map(flattenLead);
+    
+    // Cargar configuración de Test A/B
+    const { data: configData } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "ab_test_mode")
+      .single();
+    
+    if (configData) setAbMode(configData.value);
+
+    const flat = (leadsData as unknown as RawLead[]).map(flattenLead);
     setLeads(flat);
     setMetrics(computeMetrics(flat));
     setLoading(false);
   }, []);
+
+  async function handleAbModeChange(newMode: string) {
+    setAbMode(newMode);
+    const { error } = await supabase
+      .from("app_config")
+      .update({ value: newMode })
+      .eq("key", "ab_test_mode");
+    
+    if (error) {
+      alert("No se pudo guardar el cambio. Asegúrate de haber ejecutado el SQL en Supabase.");
+      console.error(error);
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -142,7 +168,13 @@ export default function AdminDashboard() {
       <main className="p-6 space-y-6 max-w-7xl mx-auto">
 
         {/* Metrics */}
-        {metrics && <MetricsRow metrics={metrics} />}
+        {metrics && (
+          <MetricsRow 
+            metrics={metrics} 
+            abMode={abMode} 
+            onModeChange={handleAbModeChange} 
+          />
+        )}
 
         {/* Social Proof Banners */}
         <BannersAdmin />
