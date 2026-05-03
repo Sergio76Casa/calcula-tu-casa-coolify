@@ -7,6 +7,7 @@ import EnergyScale             from "@/components/EnergyScale";
 import { U }           from "@/lib/uiStrings";
 import type { Lang }   from "@/lib/translations";
 import { supabase }    from "@/lib/supabase";
+import SellModal        from "./SellModal";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,8 @@ interface ValuationDashboardProps {
   details:  PropertyDetails;
   address:  string;
   lang?:    Lang;
+  leadId?:  string | null;
+  telefonoInicial?: string | null;
   onReset?: () => void;
 }
 interface Highlight { icon: string; text: string }
@@ -137,26 +140,40 @@ function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) 
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export default function ValuationDashboard({ result, details, address, lang = "es", onReset }: ValuationDashboardProps) {
+export default function ValuationDashboard({ 
+  result, details, address, lang = "es", leadId, telefonoInicial, onReset 
+}: ValuationDashboardProps) {
+  console.log("DEBUG - ValuationDashboard recibiendo props:", { leadId, telefonoInicial });
   const { precio_sugerido: mid, rango_precios: { minimo: min, maximo: max }, argumentario_venta } = result;
   const { pros, cons }                   = getHighlights(details);
   const { strengths, concerns, energy }  = classifyGemini(argumentario_venta);
   const tp = U(lang).pdf;
 
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfLoading,    setPdfLoading]    = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
 
   async function handleDownloadPDF() {
     setPdfLoading(true);
     try {
       const { generatePDF } = await import("@/lib/generatePDF");
+      console.log("Intentando marcar PDF descargado para:", leadId ?? "sin ID");
+      if (leadId) {
+        supabase
+          .from("leads")
+          .update({ pdf_downloaded: true })
+          .eq("id", leadId)
+          .then(({ error }) => {
+            if (error) console.log("Error de Supabase:", error);
+          });
+      }
       await generatePDF(result, details, address, lang);
-      supabase.rpc("set_pdf_downloaded", { p_propiedad_id: result.propiedad_id });
     } finally {
       setPdfLoading(false);
     }
   }
 
   return (
+    <>
     <section className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-5">
 
@@ -224,15 +241,21 @@ export default function ValuationDashboard({ result, details, address, lang = "e
           {pdfLoading ? "Generando PDF..." : tp.btn}
         </button>
 
-        {/* CTA principal */}
-        <button type="button"
+        {/* CTA principal — WhatsApp */}
+        <a
+          href={`https://wa.me/34602499146?text=${encodeURIComponent(
+            `Hola, acabo de valorar mi propiedad en CalculaTuCasa.com y me gustaría solicitar una visita para una valoración física profesional. La dirección es: ${address}`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-black text-lg rounded-2xl transition-all duration-200 active:scale-[0.98] shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-3">
           <span className="text-2xl" aria-hidden="true">🗓</span>
           Solicitar visita de confirmación con un experto
-        </button>
+        </a>
 
-        {/* CTA secundario */}
+        {/* CTA secundario — modal venta */}
         <button type="button"
+          onClick={() => setShowSellModal(true)}
           className="w-full py-4 border-2 border-emerald-500/50 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 font-bold text-base rounded-2xl transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2">
           <span aria-hidden="true">💰</span>
           Quiero vender por este precio
@@ -248,5 +271,14 @@ export default function ValuationDashboard({ result, details, address, lang = "e
 
       </div>
     </section>
+
+    {showSellModal && (
+      <SellModal 
+        leadId={leadId ?? null} 
+        telefono_inicial={telefonoInicial ?? null}
+        onClose={() => setShowSellModal(false)} 
+      />
+    )}
+    </>
   );
 }

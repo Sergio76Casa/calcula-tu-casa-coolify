@@ -2,6 +2,7 @@ import type { ValuationResult } from "@/components/landing/LoadingValuationStep"
 import type { PropertyDetails }  from "@/components/landing/PropertyDetailsStep";
 import type { Lang }             from "./translations";
 import { U }                     from "./uiStrings";
+import { LOGO_BASE64 }           from "./logoBase64";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,15 +59,14 @@ export async function generatePDF(
   let y      = 0;
 
   // ── Header ────────────────────────────────────────────────────────────────
-  doc.setFillColor(...C.dark);
-  doc.rect(0, 0, W, 28, "F");
-  doc.setFontSize(16); doc.setTextColor(...C.emerald); doc.setFont("helvetica", "bold");
-  doc.text("CalculaTuCasa.com", ML, 13);
-  doc.setFontSize(8); doc.setTextColor(...C.slate3); doc.setFont("helvetica", "normal");
-  doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 13, { align: "right" });
-  doc.setFontSize(10); doc.setTextColor(...C.white); doc.setFont("helvetica", "italic");
-  doc.text(t.subtitle, ML, 22);
-  y = 36;
+  doc.setFillColor(11, 16, 29);
+  doc.rect(0, 0, W, 30, "F");
+  doc.addImage(LOGO_BASE64, "JPEG", ML, 2, 70, 22);
+  doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "normal");
+  doc.text(new Date().toLocaleDateString(lang === "en" ? "en-GB" : "es-ES"), W - MR, 10, { align: "right" });
+  doc.setFontSize(8); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "italic");
+  doc.text(t.subtitle, ML, 27);
+  y = 38;
 
   // ── Título + dirección ────────────────────────────────────────────────────
   doc.setFontSize(18); doc.setTextColor(...C.dark); doc.setFont("helvetica", "bold");

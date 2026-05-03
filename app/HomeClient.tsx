@@ -26,11 +26,13 @@ function detectLang(): Lang {
 // ─── Inner component (necesita useSearchParams → dentro de Suspense) ──────────
 
 function HomeInner({ variant }: { variant: Variant }) {
-  const [step, setStep]       = useState<Step>(1);
-  const [lang, setLang]       = useState<Lang>("es");
+  const [step,    setStep]    = useState<Step>(1);
+  const [lang,    setLang]    = useState<Lang>("es");
   const [address, setAddress] = useState("");
   const [details, setDetails] = useState<PropertyDetails | null>(null);
   const [result,  setResult]  = useState<ValuationResult  | null>(null);
+  const [leadId,  setLeadId]  = useState<string | null>(null);
+  const [telefonoInicial, setTelefonoInicial] = useState<string | null>(null);
 
   const searchParams  = useSearchParams();
   const utmSource     = searchParams.get("utm_source")   ?? "";
@@ -38,7 +40,14 @@ function HomeInner({ variant }: { variant: Variant }) {
 
   useEffect(() => { setLang(detectLang()); }, []);
 
-  function reset() { setStep(1); setAddress(""); setDetails(null); setResult(null); }
+  function reset() { 
+    setStep(1); 
+    setAddress(""); 
+    setDetails(null); 
+    setResult(null); 
+    setLeadId(null); 
+    setTelefonoInicial(null);
+  }
 
   const valuationInput: ValuationInput | null =
     address && details
@@ -83,7 +92,12 @@ function HomeInner({ variant }: { variant: Variant }) {
           utmCampaign={utmCampaign}
           result={result}
           onBack={() => setStep(2)}
-          onFinish={() => setStep(5)}
+          onFinish={(id, tel) => { 
+            console.log("DEBUG - HomeClient recibiendo onFinish:", { id, tel });
+            setLeadId(id); 
+            setTelefonoInicial(tel);
+            setStep(5); 
+          }}
         />
       )}
       {step === 5 && result && details && (
@@ -92,6 +106,8 @@ function HomeInner({ variant }: { variant: Variant }) {
           details={details}
           address={address}
           lang={lang}
+          leadId={leadId}
+          telefonoInicial={telefonoInicial}
           onReset={reset}
         />
       )}

@@ -2,7 +2,7 @@ Nombre plataforma
 
 Vamos a dividir el nombre de la empresa y el nombre de la landing page 
 El nombre empresa sera: LeadInmo AI
-El nombre landing page: ValorExacto.es 
+El nombre landing page: CalculaTuCasa.com
 
 Pero habra que mirar si se puede comprar el dominio o no de: 
 ValorExacto.es : no disponible
@@ -16,9 +16,7 @@ Skill 1: Experto en Supabase Leads, Nombre del Skill: Supabase_LeadInmo Prompt p
 
 Skill 2: Experto Tasador AI, Nombre del Skill: Gemini_Tasador Actúa como un Ingeniero de Prompts especializado en la API de Google Gemini y Supabase Edge Functions para nuestro proyecto LeadInmo AI. Tu rol es conectar el frontend con la IA de forma totalmente segura. Necesito que diseñes el código TypeScript para la Edge Function de Supabase que realizará la valoración de la propiedad. Tienes una regla de oro inquebrantable: ningún archivo o bloque de código que generes puede superar las 300 líneas. Debes cumplir estas reglas estrictas: 1) Nunca expongas la API Key de Gemini en el cliente; la llamada debe hacerse exclusivamente desde esta Edge Function. 2) La función debe estar preparada para recibir los datos del usuario (dirección, m2, estado) y también los testigos de mercado (datos del scraper) para inyectarlos en el contexto. 3) El prompt del sistema hacia Gemini debe exigir que la respuesta sea obligatoriamente un objeto JSON estructurado con las claves exactas: 'precio_sugerido', 'rango_precios' y 'argumentario_venta'. Proporciona el código de la Edge Function limpio y comentado.
 
-Skill 2: Experto Tasador AI, Nombre del Skill: Gemini_Tasador Actúa como un Ingeniero de Prompts especializado en la API de Google Gemini y Supabase Edge Functions para nuestro proyecto LeadInmo AI. Tu rol es conectar el frontend con la IA de forma totalmente segura. Necesito que diseñes el código TypeScript para la Edge Function de Supabase que realizará la valoración de la propiedad. Tienes una regla de oro inquebrantable: ningún archivo o bloque de código que generes puede superar las 300 líneas. Debes cumplir estas reglas estrictas: 1) Nunca expongas la API Key de Gemini en el cliente; la llamada debe hacerse exclusivamente desde esta Edge Function. 2) La función debe estar preparada para recibir los datos del usuario (dirección, m2, estado) y también los testigos de mercado (datos del scraper) para inyectarlos en el contexto. 3) El prompt del sistema hacia Gemini debe exigir que la respuesta sea obligatoriamente un objeto JSON estructurado con las claves exactas: 'precio_sugerido', 'rango_precios' y 'argumentario_venta'. Proporciona el código de la Edge Function limpio y comentado.
-
-git remote set-url origin https://github.com/Sergio76Casa/calcula-tu-casa.git
+GITH
 
 https://github.com/Sergio76Casa/calcula-tu-casa
 
@@ -30,4 +28,46 @@ anon puplic: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi
 
 
 clave api IA studio CalculaTuCasa: 
+
+ok Que revise el boton de crear pdf
+ok Que me deje entra usuario y contraseña
+ok Preparar el simulador de rentabilidad: Crear una hoja de cálculo (Google Sheets) para proyectar cuántos leads necesitamos vender a las agencias para cubrir los primeros 1.000€ de anuncios en Meta.
+
+que trucos hay en el sector PropTech para añadir a la web
+
+
+
+¿Te gustaría que empezáramos con la Fase 1 del plan estratégico? Podríamos:
+
+Redactar los guiones de WhatsApp: Crear 3 variantes de mensajes para el scraping (uno técnico centrado en la IA, otro centrado en la eficiencia energética y uno más directo de ayuda al vendedor).
+
+
+🚀 Fase 1: El Asalto a Idealista (Captación Manual)
+Como prometí, aquí tienes los 3 guiones "Rompehielo" diseñados para que los envíes por WhatsApp o por el chat de Idealista/Fotocasa a los particulares que venden en tu zona.
+
+Estrategia: El objetivo no es venderles nada, sino regalarles el informe que acabamos de pulir para que entren en tu embudo.
+
+Opción A: El enfoque "Tecnológico/IA" (Alta curiosidad)
+"Hola, he visto tu anuncio en Idealista. Soy de una PropTech local y hemos pasado los datos de tu vivienda por nuestro nuevo motor de valoración con IA. El informe indica que podrías defender un precio mejor si destacas ciertos puntos. Te lo he generado gratis en PDF, ¿te lo paso por aquí por si te sirve para la venta?"
+
+Opción B: El enfoque "Energético" (Autoridad técnica)
+"Buenas tardes, he visto tu casa publicada. Me dedico a la consultoría inmobiliaria y he notado que no mencionas el impacto de la eficiencia energética en el precio final. He sacado una valoración profesional detallada donde desglosamos cómo influye esto en el mercado actual del Vallès. ¿Te interesa que te mande el informe gratuito?"
+
+Opción C: El "Directo y rápido" (Ideal para captar el teléfono)
+"Hola, soy [Tu Nombre]. He visto tu anuncio y me ha gustado mucho la zona. He generado una valoración de mercado actualizada de tu calle con nuestra plataforma CalculaTuCasa.com para comparar con otros cierres recientes. Si quieres, dime un WhatsApp y te mando el PDF ahora mismo para que tengas el dato real."
+
+¿Qué hacemos ahora?
+¿Quieres que preparemos el Excel de rentabilidad para saber cuánto puedes invertir en anuncios sin perder dinero?
+
+¿O prefieres que hagamos un último retoque a alguna parte de la web antes de lanzarla oficialmente a redes sociales?
+
+¡Tú mandas, ya eres el dueño de una plataforma inmobiliaria de nivel profesional!
+
+¡La máquina está construida y el panel de control listo! 🚀
+Tienes el software, el panel de administración sin fugas y el simulador financiero. ¿Cuál es el siguiente movimiento estratégico?
+
+A: ¿Empezamos a diseñar los textos e imágenes para los anuncios de Meta y metemos a los primeros usuarios reales?
+
+B: ¿Preparamos el "Pitch" de ventas (el correo o guion) para enviárselo a 5 o 10 agencias inmobiliarias de Sabadell/Terrassa y decirles lo que tienes entre manos?
+
 

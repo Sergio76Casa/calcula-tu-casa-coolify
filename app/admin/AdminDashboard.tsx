@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import LoginGate   from "./LoginGate";
 import MetricsRow, { type Metrics } from "./MetricsRow";
 import LeadsTable,  { type LeadRow }  from "./LeadsTable";
+import BannersAdmin from "./BannersAdmin";
 
 const AdminMap = dynamic(() => import("./AdminMap"), { ssr: false });
 
@@ -13,9 +14,10 @@ const AdminMap = dynamic(() => import("./AdminMap"), { ssr: false });
 
 interface RawLead {
   id: string; created_at: string;
-  nombre: string; telefono: string; email: string;
+  nombre: string; telefono: string; telefono_final: string | null; email: string;
   test_variant: string | null; utm_source: string | null; utm_campaign: string | null;
   pdf_downloaded: boolean; lang: string | null; propiedad_id: string;
+  venta_urgencia: string | null; venta_estado: string | null; quiere_vender: boolean;
   propiedades: {
     direccion_completa: string;
     valoraciones: Array<{ precio_estimado: number }>;
@@ -27,9 +29,10 @@ interface RawLead {
 function flattenLead(r: RawLead): LeadRow {
   return {
     id: r.id, created_at: r.created_at,
-    nombre: r.nombre, telefono: r.telefono, email: r.email,
+    nombre: r.nombre, telefono: r.telefono, telefono_final: r.telefono_final, email: r.email,
     test_variant: r.test_variant, utm_source: r.utm_source, utm_campaign: r.utm_campaign,
     pdf_downloaded: r.pdf_downloaded, lang: r.lang,
+    venta_urgencia: r.venta_urgencia, venta_estado: r.venta_estado, quiere_vender: r.quiere_vender,
     direccion: r.propiedades?.direccion_completa,
     precio:    r.propiedades?.valoraciones?.[0]?.precio_estimado,
   };
@@ -71,9 +74,10 @@ export default function AdminDashboard() {
     const { data, error: err } = await supabase
       .from("leads")
       .select(`
-        id, created_at, nombre, telefono, email,
+        id, created_at, nombre, telefono, telefono_final, email,
         test_variant, utm_source, utm_campaign,
         pdf_downloaded, lang, propiedad_id,
+        venta_urgencia, venta_estado, quiere_vender,
         propiedades (
           direccion_completa,
           valoraciones ( precio_estimado )
@@ -139,6 +143,9 @@ export default function AdminDashboard() {
 
         {/* Metrics */}
         {metrics && <MetricsRow metrics={metrics} />}
+
+        {/* Social Proof Banners */}
+        <BannersAdmin />
 
         {/* Map */}
         {mapPins.length > 0 && (

@@ -25,7 +25,7 @@ interface LeadCaptureStepProps {
   utmSource?: string;
   utmCampaign?: string;
   result: ValuationResult;
-  onFinish?: (result: ValuationResult) => void;
+  onFinish?: (leadId: string, telefono: string) => void;
   onBack?: () => void;
 }
 
@@ -121,7 +121,11 @@ export default function LeadCaptureStep({
     setLoading(true);
     setApiError(null);
 
+    // Generamos el ID en cliente para no depender de SELECT RLS post-insert
+    const leadId = crypto.randomUUID();
+
     const { error } = await supabase.from("leads").insert({
+      id:           leadId,
       propiedad_id: result.propiedad_id,
       nombre:       form.nombre.trim(),
       telefono:     form.telefono.trim(),
@@ -134,7 +138,8 @@ export default function LeadCaptureStep({
 
     setLoading(false);
     if (error) { setApiError(tc.errors.api); return; }
-    onFinish?.(result);
+    console.log("DEBUG - LeadCaptureStep llamando onFinish:", { leadId, tel: form.telefono.trim() });
+    onFinish?.(leadId, form.telefono.trim());
   }
 
   return (

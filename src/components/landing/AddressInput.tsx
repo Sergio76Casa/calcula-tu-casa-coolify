@@ -66,7 +66,7 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&addressdetails=0`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&addressdetails=0&countrycodes=es`;
         const res  = await fetch(url, { headers: { "User-Agent": "CalculaTuCasa/1.0" } });
         const data = (await res.json()) as Suggestion[];
         setSuggestions(data.slice(0, 5));
