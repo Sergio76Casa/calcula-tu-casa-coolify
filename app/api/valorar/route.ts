@@ -1,22 +1,16 @@
-// supabase/functions/valorar-propiedad/index.ts
-// Edge Function: recibe datos de propiedad + testigos de mercado,
-// llama a Gemini de forma segura y persiste la valoración en Supabase.
-
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// ─── Tipos ───────────────────────────────────────────────────────────────────
+import { NextResponse } from "next/server";
+import { pbCreate } from "@/lib/pocketbase";
 
 interface PropiedadInput {
-  propiedad_id?: string;          // opcional: si no viene, la función la crea
+  propiedad_id?: string;
   direccion_completa: string;
   m2_construidos: number;
   estado_conservacion: "nuevo" | "bueno" | "regular" | "a_reformar";
   tipo_propiedad?: "piso" | "casa";
-  habitaciones?: number;          // 1 | 2 | 3 | 4 (4 = "4+")
+  habitaciones?: number;
   ascensor?: boolean;
   jardin?: boolean;
-  certificado_energetico?: string; // A | B | C | D | E | F | G | pending
+  certificado_energetico?: string;
 }
 
 interface TestigoMercado {
@@ -32,27 +26,14 @@ interface RequestBody {
   lang?: string;
 }
 
-// Contrato de respuesta obligatorio que Gemini debe devolver
 interface ValoracionGemini {
   precio_sugerido: number;
   rango_precios: { minimo: number; maximo: number };
   argumentario_venta: string;
 }
 
-// ─── Constantes ──────────────────────────────────────────────────────────────
-
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-const JSON_HEADER = { ...CORS, "Content-Type": "application/json" };
-
-// ─── Construcción del prompt ──────────────────────────────────────────────────
 
 function buildPrompt(p: PropiedadInput, testigos: TestigoMercado[], lang = "es"): string {
   const estadoLabel: Record<string, string> = {
@@ -120,19 +101,14 @@ RESPONDE EXCLUSIVAMENTE con este objeto JSON, sin texto adicional ni bloques de 
 }`;
 }
 
-// ─── Cliente Gemini ───────────────────────────────────────────────────────────
-
-async function callGemini(
-  prompt: string,
-  apiKey: string
-): Promise<ValoracionGemini> {
+async function callGemini(prompt: string, apiKey: string): Promise<ValoracionGemini> {
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.2,          // baja temperatura = respuesta más determinista
+        temperature: 0.2,
         responseMimeType: "application/json",
       },
     }),
@@ -150,7 +126,6 @@ async function callGemini(
 
   const parsed = JSON.parse(raw) as ValoracionGemini;
 
-  // Validación del contrato de respuesta
   if (
     typeof parsed.precio_sugerido !== "number" ||
     typeof parsed.rango_precios?.minimo !== "number" ||
@@ -163,83 +138,57 @@ async function callGemini(
   return parsed;
 }
 
-// ─── Handler principal ────────────────────────────────────────────────────────
-
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Método no permitido" }), {
-      status: 405,
-      headers: JSON_HEADER,
-    });
-  }
-
+export async function POST(req: Request) {
   try {
     const body: RequestBody = await req.json();
     const { propiedad, testigos = [], lang = "es" } = body;
 
     if (!propiedad?.direccion_completa || !propiedad?.m2_construidos || !propiedad?.estado_conservacion) {
-      return new Response(
-        JSON.stringify({ error: "Faltan campos obligatorios en propiedad" }),
-        { status: 400, headers: JSON_HEADER }
+      return NextResponse.json(
+        { error: "Faltan campos obligatorios en propiedad" },
+        { status: 400 }
       );
     }
 
-    // Las claves NUNCA salen del servidor
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    if (!GEMINI_API_KEY || !SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+    if (!GEMINI_API_KEY) {
       throw new Error("Variables de entorno no configuradas en el proyecto");
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
-    // Si no viene propiedad_id, la creamos aquí con service_role (bypassa RLS)
     let propiedadId = propiedad.propiedad_id;
     if (!propiedadId) {
-      const { data: newProp, error: propError } = await supabase
-        .from("propiedades")
-        .insert({
-          direccion_completa: propiedad.direccion_completa,
-          m2_construidos: propiedad.m2_construidos,
-          estado_conservacion: propiedad.estado_conservacion,
-        })
-        .select("id")
-        .single();
-      if (propError) throw new Error(`Insert propiedad: ${propError.message}`);
+      const newProp = await pbCreate("propiedades", {
+        direccion_completa:     propiedad.direccion_completa,
+        m2_construidos:         propiedad.m2_construidos,
+        estado_conservacion:    propiedad.estado_conservacion,
+        tipo_propiedad:         propiedad.tipo_propiedad || null,
+        habitaciones:           propiedad.habitaciones || null,
+        ascensor:               propiedad.ascensor ?? null,
+        jardin:                 propiedad.jardin ?? null,
+        certificado_energetico: propiedad.certificado_energetico || null,
+      });
       propiedadId = newProp.id;
     }
 
-    // Llamada segura a Gemini
     const valoracion = await callGemini(buildPrompt(propiedad, testigos, lang), GEMINI_API_KEY);
 
-    // Persistencia con service_role (bypassa RLS — solo permitido server-side)
-    const { data, error } = await supabase
-      .from("valoraciones")
-      .insert({
-        propiedad_id: propiedadId,
-        precio_estimado: valoracion.precio_sugerido,
-        analisis_gemini: valoracion,
-      })
-      .select("id")
-      .single();
+    const newVal = await pbCreate("valoraciones", {
+      propiedad_id:       propiedadId,
+      precio_sugerido:    valoracion.precio_sugerido,
+      rango_minimo:       valoracion.rango_precios.minimo,
+      rango_maximo:       valoracion.rango_precios.maximo,
+      argumentario_venta: valoracion.argumentario_venta,
+    });
 
-    if (error) throw new Error(`Supabase insert valoracion: ${error.message}`);
-
-    return new Response(
-      JSON.stringify({ success: true, valoracion_id: data.id, propiedad_id: propiedadId, ...valoracion }),
-      { status: 200, headers: JSON_HEADER }
-    );
-
+    return NextResponse.json({
+      success: true,
+      valoracion_id: newVal.id,
+      propiedad_id: propiedadId,
+      ...valoracion,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error interno";
-    console.error("[valorar-propiedad]", msg);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: JSON_HEADER,
-    });
+    console.error("[api/valorar]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
-});
+}

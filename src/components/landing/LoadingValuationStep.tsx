@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { T } from "@/lib/translations";
 import type { EstadoConservacion, TipoPropiedad, EnergyCertificate } from "./PropertyDetailsStep";
 import type { Lang } from "@/lib/translations";
@@ -88,33 +87,39 @@ export default function LoadingValuationStep({
     return () => clearInterval(id);
   }, []);
 
-  // Llamada a la Edge Function (una sola vez)
+  // Llamada a la API Route de Next.js (una sola vez)
   useEffect(() => {
     if (called.current) return;
     called.current = true;
 
     async function runValuation() {
       try {
-        const { data, error } = await supabase.functions.invoke<ValuationResult>(
-          "valorar-propiedad",
-          {
-            body: {
-              lang: input.lang ?? "es",
-              propiedad: {
-                direccion_completa:       input.address,
-                m2_construidos:           input.m2,
-                estado_conservacion:      input.estado,
-                tipo_propiedad:           input.tipo,
-                habitaciones:             input.habitaciones,
-                ascensor:                 input.ascensor,
-                jardin:                   input.jardin,
-                certificado_energetico:   input.energyCertificate,
-              },
+        const res = await fetch("/api/valorar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            lang: input.lang ?? "es",
+            propiedad: {
+              direccion_completa:       input.address,
+              m2_construidos:           input.m2,
+              estado_conservacion:      input.estado,
+              tipo_propiedad:           input.tipo,
+              habitaciones:             input.habitaciones,
+              ascensor:                 input.ascensor,
+              jardin:                   input.jardin,
+              certificado_energetico:   input.energyCertificate,
             },
-          }
-        );
+          }),
+        });
 
-        if (error) throw new Error(error.message);
+        if (!res.ok) {
+          const detail = await res.json();
+          throw new Error(detail?.error || tl.errorMsg);
+        }
+
+        const data = (await res.json()) as ValuationResult;
         if (!data?.precio_sugerido) throw new Error(tl.errorMsg);
 
         setProgress(100);

@@ -33,6 +33,7 @@ function HomeInner({ variant }: { variant: Variant }) {
   const [result,  setResult]  = useState<ValuationResult  | null>(null);
   const [leadId,  setLeadId]  = useState<string | null>(null);
   const [telefonoInicial, setTelefonoInicial] = useState<string | null>(null);
+  const [leadNombre, setLeadNombre] = useState<string | null>(null);
 
   const searchParams  = useSearchParams();
   const utmSource     = searchParams.get("utm_source")   ?? "";
@@ -47,6 +48,7 @@ function HomeInner({ variant }: { variant: Variant }) {
     setResult(null); 
     setLeadId(null); 
     setTelefonoInicial(null);
+    setLeadNombre(null);
   }
 
   const valuationInput: ValuationInput | null =
@@ -92,10 +94,11 @@ function HomeInner({ variant }: { variant: Variant }) {
           utmCampaign={utmCampaign}
           result={result}
           onBack={() => setStep(2)}
-          onFinish={(id, tel) => { 
-            console.log("DEBUG - HomeClient recibiendo onFinish:", { id, tel });
+          onFinish={(id, tel, name) => { 
+            console.log("DEBUG - HomeClient recibiendo onFinish:", { id, tel, name });
             setLeadId(id); 
             setTelefonoInicial(tel);
+            setLeadNombre(name);
             setStep(5); 
           }}
         />
@@ -108,6 +111,7 @@ function HomeInner({ variant }: { variant: Variant }) {
           lang={lang}
           leadId={leadId}
           telefonoInicial={telefonoInicial}
+          leadNombre={leadNombre}
           onReset={reset}
         />
       )}

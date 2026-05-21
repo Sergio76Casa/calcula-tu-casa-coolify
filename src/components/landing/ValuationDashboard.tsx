@@ -6,7 +6,6 @@ import type { PropertyDetails } from "./PropertyDetailsStep";
 import EnergyScale             from "@/components/EnergyScale";
 import { U }           from "@/lib/uiStrings";
 import type { Lang }   from "@/lib/translations";
-import { supabase }    from "@/lib/supabase";
 import SellModal        from "./SellModal";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -18,6 +17,7 @@ interface ValuationDashboardProps {
   lang?:    Lang;
   leadId?:  string | null;
   telefonoInicial?: string | null;
+  leadNombre?:      string | null;
   onReset?: () => void;
 }
 interface Highlight { icon: string; text: string }
@@ -141,9 +141,9 @@ function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function ValuationDashboard({ 
-  result, details, address, lang = "es", leadId, telefonoInicial, onReset 
+  result, details, address, lang = "es", leadId, telefonoInicial, leadNombre, onReset 
 }: ValuationDashboardProps) {
-  console.log("DEBUG - ValuationDashboard recibiendo props:", { leadId, telefonoInicial });
+  console.log("DEBUG - ValuationDashboard recibiendo props:", { leadId, telefonoInicial, leadNombre });
   const { precio_sugerido: mid, rango_precios: { minimo: min, maximo: max }, argumentario_venta } = result;
   const { pros, cons }                   = getHighlights(details);
   const { strengths, concerns, energy }  = classifyGemini(argumentario_venta);
@@ -157,24 +157,21 @@ export default function ValuationDashboard({
     try {
       const { generatePDF } = await import("@/lib/generatePDF");
       
-      let userName = null;
+      let userName = leadNombre || null;
       if (leadId) {
-        // 1. Marcar como descargado
-        supabase
-          .from("leads")
-          .update({ pdf_downloaded: true })
-          .eq("id", leadId)
-          .then(({ error }) => {
-            if (error) console.log("Error marking PDF downloaded:", error);
-          });
-
-        // 2. Recuperar el nombre para personalizar el PDF
-        const { data } = await supabase
-          .from("leads")
-          .select("nombre")
-          .eq("id", leadId)
-          .single();
-        if (data) userName = data.nombre;
+        // 1. Marcar como descargado vía API
+        fetch("/api/lead", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            leadId,
+            action: "download",
+          }),
+        }).catch((err) => {
+          console.error("Error marking PDF downloaded:", err);
+        });
       }
       
       await generatePDF(result, details, address, lang, userName);

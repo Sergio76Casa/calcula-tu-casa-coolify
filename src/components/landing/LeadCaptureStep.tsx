@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { T, type Lang, type Variant } from "@/lib/translations";
 import type { ValuationResult } from "./LoadingValuationStep";
 
@@ -25,7 +24,7 @@ interface LeadCaptureStepProps {
   utmSource?: string;
   utmCampaign?: string;
   result: ValuationResult;
-  onFinish?: (leadId: string, telefono: string) => void;
+  onFinish?: (leadId: string, telefono: string, nombre: string) => void;
   onBack?: () => void;
 }
 
@@ -121,25 +120,43 @@ export default function LeadCaptureStep({
     setLoading(true);
     setApiError(null);
 
-    // Generamos el ID en cliente para no depender de SELECT RLS post-insert
-    const leadId = crypto.randomUUID();
+    try {
+      const res = await fetch("/api/lead", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          propiedad_id: result.propiedad_id,
+          nombre:       form.nombre.trim(),
+          telefono:     form.telefono.trim(),
+          email:        form.email.trim().toLowerCase(),
+          test_variant: variant,
+          utm_source:   utmSource   || null,
+          utm_campaign: utmCampaign || null,
+          lang:         lang,
+        }),
+      });
 
-    const { error } = await supabase.from("leads").insert({
-      id:           leadId,
-      propiedad_id: result.propiedad_id,
-      nombre:       form.nombre.trim(),
-      telefono:     form.telefono.trim(),
-      email:        form.email.trim().toLowerCase(),
-      test_variant: variant,
-      utm_source:   utmSource   || null,
-      utm_campaign: utmCampaign || null,
-      lang:         lang,
-    });
+      setLoading(false);
+      if (!res.ok) {
+        setApiError(tc.errors.api);
+        return;
+      }
+      
+      const data = await res.json();
+      if (data.error || !data.lead?.id) {
+        setApiError(tc.errors.api);
+        return;
+      }
 
-    setLoading(false);
-    if (error) { setApiError(tc.errors.api); return; }
-    console.log("DEBUG - LeadCaptureStep llamando onFinish:", { leadId, tel: form.telefono.trim() });
-    onFinish?.(leadId, form.telefono.trim());
+      const registeredId = data.lead.id;
+      console.log("DEBUG - LeadCaptureStep llamando onFinish:", { leadId: registeredId, tel: form.telefono.trim(), name: form.nombre.trim() });
+      onFinish?.(registeredId, form.telefono.trim(), form.nombre.trim());
+    } catch (err) {
+      setLoading(false);
+      setApiError(tc.errors.api);
+    }
   }
 
   return (

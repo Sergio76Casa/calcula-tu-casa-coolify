@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 interface Props {
   leadId:           string | null;
@@ -82,16 +81,38 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
     setSaving(true);
     setError(null);
     if (leadId) {
-      const { error: err } = await supabase
-        .from("leads")
-        .update({ 
-          quiere_vender:  true, 
-          venta_urgencia: urgencia, 
-          venta_estado:   estado, 
-          telefono_final: telefono.trim() 
-        })
-        .eq("id", leadId);
-      if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); setSaving(false); return; }
+      try {
+        const res = await fetch("/api/lead", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            leadId,
+            action: "sell",
+            urgencia,
+            estado,
+            telefono: telefono.trim(),
+          }),
+        });
+
+        if (!res.ok) {
+          setError("No se pudo guardar. Inténtalo de nuevo.");
+          setSaving(false);
+          return;
+        }
+
+        const data = await res.json();
+        if (data.error) {
+          setError("No se pudo guardar. Inténtalo de nuevo.");
+          setSaving(false);
+          return;
+        }
+      } catch (err) {
+        setError("No se pudo guardar. Inténtalo de nuevo.");
+        setSaving(false);
+        return;
+      }
     }
     setSaving(false);
     setDone(true);

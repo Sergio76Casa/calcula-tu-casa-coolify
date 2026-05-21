@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { U } from "@/lib/uiStrings";
 import type { Lang } from "@/lib/translations";
-import { supabase } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,11 +41,14 @@ async function detectPostal(): Promise<string | null> {
 }
 
 async function fetchActiveBanners(): Promise<Banner[]> {
-  const { data } = await supabase
-    .from("social_proof_banners")
-    .select("location_name, postal_codes")
-    .eq("is_active", true);
-  return (data as Banner[]) ?? [];
+  try {
+    const res = await fetch("/api/banners");
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.error("Error fetching active banners:", err);
+    return [];
+  }
 }
 
 function resolveLocations(banners: Banner[], postal: string | null): string[] {
