@@ -1,0 +1,55 @@
+[
+  {
+    "id": "abc123propiedad",
+    "name": "propiedades",
+    "type": "base",
+    "system": false,
+    "schema": [
+      { "system": false, "id": "f_dir_comp", "name": "direccion_completa", "type": "text", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_m2_cons", "name": "m2_construidos", "type": "number", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "noDecimal": false } },
+      { "system": false, "id": "f_est_con", "name": "estado_conservacion", "type": "text", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_tip_pro", "name": "tipo_propiedad", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_habita", "name": "habitaciones", "type": "number", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "noDecimal": false } },
+      { "system": false, "id": "f_ascens", "name": "ascensor", "type": "bool", "required": false, "presentable": false, "unique": false, "options": {} },
+      { "system": false, "id": "f_jardin", "name": "jardin", "type": "bool", "required": false, "presentable": false, "unique": false, "options": {} },
+      { "system": false, "id": "f_cert_en", "name": "certificado_energetico", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } }
+    ],
+    "indexes": [], "listRule": "", "viewRule": "", "createRule": "", "updateRule": "", "deleteRule": "", "options": {}
+  },
+  {
+    "id": "abc123leads0000",
+    "name": "leads",
+    "type": "base",
+    "system": false,
+    "schema": [
+      { "system": false, "id": "f_prop_l", "name": "propiedad_id", "type": "relation", "required": true, "presentable": false, "unique": false, "options": { "collectionId": "abc123propiedad", "cascadeDelete": true, "minSelect": null, "maxSelect": 1, "displayFields": null } },
+      { "system": false, "id": "f_nombre", "name": "nombre", "type": "text", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_telef", "name": "telefono", "type": "text", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_email", "name": "email", "type": "email", "required": true, "presentable": false, "unique": false, "options": { "exceptDomains": [], "onlyDomains": [] } },
+      { "system": false, "id": "f_t_var", "name": "test_variant", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_u_src", "name": "utm_source", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_u_cmp", "name": "utm_campaign", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_lang", "name": "lang", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_p_down", "name": "pdf_downloaded", "type": "bool", "required": false, "presentable": false, "unique": false, "options": {} },
+      { "system": false, "id": "f_q_vend", "name": "quiere_vender", "type": "bool", "required": false, "presentable": false, "unique": false, "options": {} },
+      { "system": false, "id": "f_v_urg", "name": "venta_urgencia", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_v_est", "name": "venta_estado", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } },
+      { "system": false, "id": "f_t_fin", "name": "telefono_final", "type": "text", "required": false, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } }
+    ],
+    "indexes": [], "listRule": "", "viewRule": "", "createRule": "", "updateRule": "", "deleteRule": "", "options": {}
+  },
+  {
+    "id": "abc123valoracio",
+    "name": "valoraciones",
+    "type": "base",
+    "system": false,
+    "schema": [
+      { "system": false, "id": "f_prop_v", "name": "propiedad_id", "type": "relation", "required": true, "presentable": false, "unique": false, "options": { "collectionId": "abc123propiedad", "cascadeDelete": true, "minSelect": null, "maxSelect": 1, "displayFields": null } },
+      { "system": false, "id": "f_p_sug", "name": "precio_sugerido", "type": "number", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "noDecimal": false } },
+      { "system": false, "id": "f_r_min", "name": "rango_minimo", "type": "number", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "noDecimal": false } },
+      { "system": false, "id": "f_r_max", "name": "rango_maximo", "type": "number", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "noDecimal": false } },
+      { "system": false, "id": "f_arg_v", "name": "argumentario_venta", "type": "text", "required": true, "presentable": false, "unique": false, "options": { "min": null, "max": null, "pattern": "" } }
+    ],
+    "indexes": [], "listRule": "", "viewRule": "", "createRule": "", "updateRule": "", "deleteRule": "", "options": {}
+  }
+]

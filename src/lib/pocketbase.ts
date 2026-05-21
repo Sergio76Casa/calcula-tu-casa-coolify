@@ -10,7 +10,11 @@ async function getAdminToken() {
   if (adminToken) return adminToken;
 
   try {
-    const res = await fetch(`${url}/api/admins/auth-with-password`, {
+    let authUrl = `${url}/api/collections/_superusers/auth-with-password`;
+    // Fallback para versiones antiguas de PocketBase por si acaso
+    // const authUrl = `${url}/api/admins/auth-with-password`;
+    
+    const res = await fetch(authUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identity: email, password }),
