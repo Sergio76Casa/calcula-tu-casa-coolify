@@ -134,50 +134,73 @@ export async function generatePDF(
   doc.text(t.max, W - MR, y, { align: "right" }); doc.text(fmt(max), W - MR, y + 4, { align: "right" });
   y += 12;
 
-  // ── Impacto Energético (GRAFICO MEJORADO) ──────────────────────────────────
-  const cert = details.energyCertificate;
-  if (cert && cert !== "pending") {
-    doc.setDrawColor(...C.slate3); doc.setLineWidth(0.3);
-    doc.line(ML, y, W - MR, y); y += 8;
+  // ── Impacto Energético (SIEMPRE VISIBLE) ───────────────────────────────────
+  const cert = details.energyCertificate || "pending";
+  
+  doc.setDrawColor(...C.slate3); doc.setLineWidth(0.3);
+  doc.line(ML, y, W - MR, y); y += 8;
 
-    doc.setFontSize(8); doc.setTextColor(...C.slate5); doc.setFont("helvetica", "normal");
-    doc.text(t.energyImpact.toUpperCase(), ML, y); y += 7;
+  doc.setFontSize(8); doc.setTextColor(...C.slate5); doc.setFont("helvetica", "normal");
+  doc.text(t.energyImpact.toUpperCase(), ML, y); y += 7;
 
-    // Dibujar escala A-G
-    const letters = ["A", "B", "C", "D", "E", "F", "G"];
-    const startX  = ML;
-    const barW    = 40;
-    const barH    = 4.5;
-    const gap     = 1.2;
+  // Dibujar escala A-G
+  const letters = ["A", "B", "C", "D", "E", "F", "G"];
+  const startX  = ML;
+  const barW    = 40;
+  const barH    = 4.5;
+  const gap     = 1.2;
 
-    letters.forEach((l, idx) => {
-      const currentY = y + (idx * (barH + gap));
-      const length   = barW + (idx * 5); // Cada barra un poco más larga
-      
-      // Color de la barra
-      doc.setFillColor(...ENERGY_RGB[l]);
-      doc.rect(startX, currentY, length, barH, "F");
-      
-      // Letra
-      doc.setFontSize(7); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
-      doc.text(l, startX + 2, currentY + 3.5);
+  letters.forEach((l, idx) => {
+    const currentY = y + (idx * (barH + gap));
+    const length   = barW + (idx * 5); // Cada barra un poco más larga
+    
+    // Color de la barra
+    doc.setFillColor(...ENERGY_RGB[l]);
+    doc.rect(startX, currentY, length, barH, "F");
+    
+    // Letra
+    doc.setFontSize(7); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+    doc.text(l, startX + 2, currentY + 3.5);
 
-      // Si es la del usuario, dibujamos el indicador
-      if (l === cert) {
-        doc.setDrawColor(...C.dark); doc.setLineWidth(0.5);
-        doc.line(startX + length + 2, currentY + barH/2, startX + length + 8, currentY + barH/2);
-        doc.setFontSize(9); doc.setTextColor(...C.dark);
-        doc.text("SU VIVIENDA", startX + length + 10, currentY + 3.5);
-      }
-    });
+    // Si es la del usuario, dibujamos el indicador
+    if (l === cert) {
+      doc.setDrawColor(...C.dark); doc.setLineWidth(0.5);
+      doc.line(startX + length + 2, currentY + barH/2, startX + length + 8, currentY + barH/2);
+      doc.setFontSize(9); doc.setTextColor(...C.dark);
+      doc.text("SU VIVIENDA", startX + length + 10, currentY + 3.5);
+    }
+  });
 
-    // Texto de impacto debajo del gráfico
-    y += (letters.length * (barH + gap)) + 6;
-    doc.setFontSize(9); doc.setTextColor(...C.dark); doc.setFont("helvetica", "normal");
-    const impLines = doc.splitTextToSize(energyImpactMsg(cert), CW);
-    doc.text(impLines, ML, y);
-    y += impLines.length * 5 + 8;
+  // Si está en trámite o no especificado, dibujamos una etiqueta informativa al lado de la escala
+  if (cert === "pending") {
+    const pendingText = lang === "en" ? "CERTIFICATE PENDING" : lang === "ca" ? "CERTIFICAT EN TRÀMIT" : "CERTIFICADO EN TRÁMITE";
+    doc.setFillColor(239, 246, 255); // Azul muy claro
+    doc.roundedRect(startX + 85, y + 10, 60, 16, 2, 2, "F");
+    doc.setDrawColor(191, 219, 254); // Borde azul claro
+    doc.setLineWidth(0.3);
+    doc.roundedRect(startX + 85, y + 10, 60, 16, 2, 2, "S");
+    
+    doc.setFontSize(8); doc.setTextColor(29, 78, 216); doc.setFont("helvetica", "bold");
+    doc.text(pendingText, startX + 115, y + 17, { align: "center" });
+    doc.setFontSize(7); doc.setTextColor(96, 165, 250); doc.setFont("helvetica", "normal");
+    doc.text(lang === "en" ? "Not yet rated" : lang === "ca" ? "Pendent de qualificació" : "Pendiente de calificación", startX + 115, y + 22, { align: "center" });
   }
+
+  // Texto de impacto debajo del gráfico
+  y += (letters.length * (barH + gap)) + 6;
+  doc.setFontSize(9); doc.setTextColor(...C.dark); doc.setFont("helvetica", "normal");
+  
+  const msg = cert === "pending"
+    ? (lang === "en"
+        ? "Energy certificate in progress. The final rating can affect the market value of the property by up to +/- 10%."
+        : lang === "ca"
+        ? "Certificat energètic en tràmit. La qualificació final pot afectar el valor de mercat de la propietat fins a un +/- 10%."
+        : "Certificado energético en trámite o no informado. La calificación final puede afectar al valor de mercado de la propiedad hasta un +/- 10%.")
+    : energyImpactMsg(cert);
+    
+  const impLines = doc.splitTextToSize(msg, CW);
+  doc.text(impLines, ML, y);
+  y += impLines.length * 5 + 8;
 
   // ── Argumentario ─────────────────────────────────────────────────────────
   doc.setDrawColor(...C.slate3); doc.setLineWidth(0.3);

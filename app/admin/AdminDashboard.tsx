@@ -50,21 +50,40 @@ export default function AdminDashboard() {
     try {
       const leadsData = await pbClient.collection("leads").getFullList({
         expand: "propiedad_id",
-        sort: "-created_at"
+        sort: "-created"
       });
       const valData = await pbClient.collection("valoraciones").getFullList();
       const valMap = new Map();
-      valData.forEach(v => valMap.set(v.propiedad_id, v.precio_sugerido));
+      valData.forEach(v => valMap.set(v.propiedad_id, v));
       
-      const flat: LeadRow[] = leadsData.map((r: any) => ({
-        id: r.id, created_at: r.created_at,
-        nombre: r.nombre, telefono: r.telefono, telefono_final: r.telefono_final, email: r.email,
-        test_variant: r.test_variant, utm_source: r.utm_source, utm_campaign: r.utm_campaign,
-        pdf_downloaded: r.pdf_downloaded, lang: r.lang,
-        venta_urgencia: r.venta_urgencia, venta_estado: r.venta_estado, quiere_vender: r.quiere_vender,
-        direccion: r.expand?.propiedad_id?.direccion_completa,
-        precio: valMap.get(r.propiedad_id)
-      }));
+      const flat: LeadRow[] = leadsData.map((r: any) => {
+        const val = valMap.get(r.propiedad_id);
+        const prop = r.expand?.propiedad_id;
+        return {
+          id: r.id, created_at: r.created,
+          nombre: r.nombre, telefono: r.telefono, telefono_final: r.telefono_final, email: r.email,
+          test_variant: r.test_variant, utm_source: r.utm_source, utm_campaign: r.utm_campaign,
+          pdf_downloaded: r.pdf_downloaded, lang: r.lang,
+          venta_urgencia: r.venta_urgencia, venta_estado: r.venta_estado, quiere_vender: r.quiere_vender,
+          direccion: prop?.direccion_completa,
+          certificado_energetico: prop?.certificado_energetico,
+          precio: val?.precio_sugerido,
+          raw_propiedad: prop ? {
+            m2: prop.m2_construidos,
+            estado: prop.estado_conservacion,
+            tipo: prop.tipo_propiedad,
+            habitaciones: prop.habitaciones,
+            ascensor: prop.ascensor,
+            jardin: prop.jardin,
+            energyCertificate: prop.certificado_energetico
+          } : null,
+          raw_valoracion: val ? {
+            precio_sugerido: val.precio_sugerido,
+            rango_precios: { minimo: val.rango_minimo, maximo: val.rango_maximo },
+            argumentario_venta: val.argumentario_venta
+          } : null
+        };
+      });
 
       setLeads(flat);
       setMetrics(computeMetrics(flat));
