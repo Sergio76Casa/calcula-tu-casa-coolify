@@ -39,7 +39,7 @@ async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
 
 export default function BannerForm({ banner, onClose, onSaved }: Props) {
   const [name,      setName]      = useState(banner?.location_name ?? "");
-  const [codes,     setCodes]     = useState(banner?.postal_codes.join(", ") ?? "");
+  const [codes,     setCodes]     = useState(Array.isArray(banner?.postal_codes) ? banner.postal_codes.join(", ") : "");
   const [active,    setActive]    = useState(banner?.is_active ?? true);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState<string | null>(null);

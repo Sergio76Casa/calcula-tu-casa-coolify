@@ -95,7 +95,7 @@ export default function BannersAdmin() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{b.location_name}</p>
                 <p className="text-xs text-slate-500 truncate">
-                  {b.postal_codes.length > 0
+                  {Array.isArray(b.postal_codes) && b.postal_codes.length > 0
                     ? b.postal_codes.join(", ")
                     : "Sin códigos postales · Fallback genérico"}
                 </p>
