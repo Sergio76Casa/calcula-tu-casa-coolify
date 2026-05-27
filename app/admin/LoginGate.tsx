@@ -14,7 +14,7 @@ export default function LoginGate() {
     setLoading(true);
     setError("");
     try {
-      await pbClient.collection("_superusers").authWithPassword(email, password);
+      await pbClient.admins.authWithPassword(email, password);
     } catch (err) {
       setError("Credenciales incorrectas. Inténtalo de nuevo.");
     } finally {
