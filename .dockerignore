@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+.git
+.gitignore
+.env*.local
+README.md
+.claude
+Dockerfile
+docker-compose.yml
+pb_schema.json
+arquitectura_leadinmo.md
+Documentos2.txt
+*.md
