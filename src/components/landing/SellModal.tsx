@@ -31,18 +31,18 @@ function OptionCard({ icon, label, sub, selected, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left ${
+      className={`w-full flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 rounded-2xl border transition-all text-left ${
         selected
           ? "border-emerald-400 bg-emerald-400/10"
           : "border-white/10 bg-white/5 hover:border-white/30"
       }`}
     >
-      <span className="text-2xl">{icon}</span>
+      <span className="text-xl sm:text-2xl flex-shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold ${selected ? "text-emerald-400" : "text-white"}`}>{label}</p>
-        <p className="text-xs text-slate-500">{sub}</p>
+        <p className={`text-xs sm:text-sm font-semibold leading-tight ${selected ? "text-emerald-400" : "text-white"}`}>{label}</p>
+        <p className="text-[10px] sm:text-xs text-slate-500 leading-normal">{sub}</p>
       </div>
-      {selected && <span className="text-emerald-400 text-lg flex-shrink-0">✓</span>}
+      {selected && <span className="text-emerald-400 text-base sm:text-lg flex-shrink-0 ml-1">✓</span>}
     </button>
   );
 }
@@ -120,7 +120,7 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl">
+      <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-5 sm:p-6 shadow-2xl">
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-base font-bold text-white">

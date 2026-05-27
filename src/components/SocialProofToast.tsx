@@ -105,13 +105,13 @@ export default function SocialProofToast({ lang }: { lang: Lang }) {
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-6 left-6 z-40 transition-all duration-500 ${
+      className={`fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto z-40 transition-all duration-500 mx-auto sm:mx-0 max-w-[calc(100%-2rem)] sm:max-w-[280px] ${
         visible
           ? "opacity-100 translate-y-0 pointer-events-auto"
           : "opacity-0 translate-y-3 pointer-events-none"
       }`}
     >
-      <div className="flex items-center gap-3 bg-slate-800/95 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-3 shadow-2xl max-w-[280px]">
+      <div className="flex items-center justify-between gap-3 bg-slate-800/95 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-3 shadow-2xl w-full">
         <span className="text-xl flex-shrink-0" aria-hidden="true">🏠</span>
         <p className="text-slate-300 text-sm leading-snug">
           <span className="text-white font-semibold">

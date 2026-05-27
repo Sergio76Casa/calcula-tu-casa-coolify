@@ -123,11 +123,11 @@ function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) 
       <div className="relative h-10">
         <div className="absolute -translate-x-1/2 text-center" style={{ left: `${labelClamp}%` }}>
           <div className="w-px h-3 bg-emerald-400/70 mx-auto" />
-          <p className="text-emerald-400 font-black text-sm whitespace-nowrap"
+          <p className="text-emerald-400 font-black text-xs sm:text-sm whitespace-nowrap"
             style={{ textShadow: "0 0 12px rgba(52,211,153,0.7)" }}>
             {mid.toLocaleString("es-ES")} €
           </p>
-          <p className="text-emerald-400/60 text-[10px] uppercase tracking-wide whitespace-nowrap">Precio sugerido</p>
+          <p className="text-emerald-400/60 text-[8px] sm:text-[10px] uppercase tracking-wide whitespace-nowrap">Precio sugerido</p>
         </div>
       </div>
       <div className="flex justify-between text-xs mt-1">
@@ -197,7 +197,7 @@ export default function ValuationDashboard({
         {/* Precio + rango */}
         <div className="bg-slate-800/60 border border-emerald-500/20 rounded-2xl p-6 text-center backdrop-blur-sm">
           <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Valor de mercado estimado</p>
-          <p className="text-6xl md:text-7xl font-black text-emerald-400 tabular-nums my-3"
+          <p className="text-4xl min-[380px]:text-5xl sm:text-6xl md:text-7xl font-black text-emerald-400 tabular-nums my-3"
             style={{ textShadow: "0 0 25px rgba(52,211,153,0.7), 0 0 60px rgba(52,211,153,0.35)" }}>
             {mid.toLocaleString("es-ES")} €
           </p>
@@ -256,8 +256,8 @@ export default function ValuationDashboard({
           )}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full py-5 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-black text-lg rounded-2xl transition-all duration-200 active:scale-[0.98] shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-3">
-          <span className="text-2xl" aria-hidden="true">🗓</span>
+          className="w-full py-4 sm:py-5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-black text-sm sm:text-lg rounded-2xl transition-all duration-200 active:scale-[0.98] shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2.5 text-center leading-tight">
+          <span className="text-xl sm:text-2xl" aria-hidden="true">🗓</span>
           Solicitar visita de confirmación con un experto
         </a>
 

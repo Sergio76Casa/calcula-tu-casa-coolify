@@ -58,7 +58,7 @@ function EnergySelector({ value, pendingLabel, onChange }: {
         return (
           <button key={cert} type="button" onClick={() => onChange(cert)}
             style={colored ? { backgroundColor: ENERGY_BG[cert], borderColor: ENERGY_BG[cert] } : undefined}
-            className={`px-3 py-1.5 rounded-lg border-2 text-sm font-bold transition-all active:scale-95 ${
+            className={`px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg border-2 text-xs sm:text-sm font-bold transition-all active:scale-95 ${
               sel
                 ? cert === "pending"
                   ? "border-blue-400 bg-blue-500/20 text-white"
@@ -244,10 +244,10 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
                 const sel = estado === opt.value;
                 return (
                   <button key={opt.value} type="button" onClick={() => { setEstado(opt.value); clearErr("est"); }}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all active:scale-[0.97] ${sel ? "border-blue-400 bg-blue-500/20 shadow-lg shadow-blue-500/10" : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"}`}>
-                    <span className="text-2xl" aria-hidden="true">{opt.emoji}</span>
-                    <span className={`text-sm font-bold ${sel ? "text-white" : "text-slate-300"}`}>{opt.label}</span>
-                    <span className="text-xs text-slate-400 text-center">{opt.desc}</span>
+                    className={`flex flex-col items-center gap-1.5 p-2.5 sm:p-4 rounded-xl border-2 transition-all active:scale-[0.97] ${sel ? "border-blue-400 bg-blue-500/20 shadow-lg shadow-blue-500/10" : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"}`}>
+                    <span className="text-xl sm:text-2xl" aria-hidden="true">{opt.emoji}</span>
+                    <span className={`text-xs sm:text-sm font-bold ${sel ? "text-white" : "text-slate-300"} text-center`}>{opt.label}</span>
+                    <span className="text-[9px] min-[380px]:text-xs text-slate-400 text-center leading-tight">{opt.desc}</span>
                   </button>
                 );
               })}

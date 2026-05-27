@@ -95,7 +95,7 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
               />
               <button
                 type="submit"
-                className="whitespace-nowrap self-start px-8 py-4 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-400 hover:to-emerald-400 text-white font-bold text-lg rounded-xl transition-all duration-200 active:scale-[0.97] shadow-lg shadow-blue-500/30 cursor-pointer"
+                className="w-full sm:w-auto whitespace-nowrap self-stretch sm:self-start px-8 py-4 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-400 hover:to-emerald-400 text-white font-bold text-lg rounded-xl transition-all duration-200 active:scale-[0.97] shadow-lg shadow-blue-500/30 cursor-pointer text-center"
               >
                 {cta}
               </button>
