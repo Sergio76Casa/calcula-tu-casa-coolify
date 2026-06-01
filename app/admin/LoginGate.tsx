@@ -31,7 +31,7 @@ export default function LoginGate() {
             <span className="text-2xl">🔐</span>
           </div>
           <h1 className="text-2xl font-black text-white">Panel Admin</h1>
-          <p className="text-slate-500 text-sm mt-1">ValorExacto · Acceso restringido</p>
+          <p className="text-slate-500 text-sm mt-1">CalculaTuCasa · Acceso restringido</p>
         </div>
 
         <form onSubmit={handleSubmit}

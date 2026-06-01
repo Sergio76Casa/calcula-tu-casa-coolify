@@ -13,10 +13,34 @@ interface Props {
 // ─── Postal code lookup: OpenDataSoft geonames ───────────────────────────────
 
 async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
+  const cleanInput = cityName.trim();
+  
+  // Normalizar y extraer palabras clave significativas (removiendo acentos y conectores comunes)
+  const words = cleanInput
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+    .split(/\s+/)
+    .filter(w => w.length > 2 && w !== "del" && w !== "los" && w !== "las" && w !== "les" && w !== "els");
+
+  let whereClause = "";
+  if (words.length === 0) {
+    whereClause = `place_name like "${cleanInput}" AND country_code="ES"`;
+  } else {
+    const clauses = words.map(word => {
+      // Tolerar variantes catalán/castellano de "San" y "Sant"
+      if (word === "san" || word === "sant") {
+        return `(place_name like "san*" or place_name like "sant*")`;
+      }
+      return `place_name like "*${word}*"`;
+    });
+    whereClause = `${clauses.join(" AND ")} AND country_code="ES"`;
+  }
+
   const url =
     `https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/` +
     `geonames-postal-code/records` +
-    `?where=place_name%3D"${encodeURIComponent(cityName)}" AND country_code%3D"ES"` +
+    `?where=${encodeURIComponent(whereClause)}` +
     `&select=postal_code&limit=100`;
 
   const res = await fetch(url);
@@ -25,12 +49,29 @@ async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
   const json = await res.json();
   const results: Array<{ postal_code?: string }> = json.results ?? [];
 
-  const codes = new Set(
-    results.map(r => r.postal_code).filter((c): c is string => Boolean(c))
-  );
+  const rawCodes = results.map(r => r.postal_code).filter((c): c is string => typeof c === "string" && /^\d{5}$/.test(c));
 
-  if (codes.size === 0) throw new Error("No se encontraron códigos postales para esa zona");
-  return Array.from(codes).sort();
+  if (rawCodes.length === 0) {
+    throw new Error("No se encontraron códigos postales para esa zona");
+  }
+
+  // Filtrado inteligente: nos quedamos solo con los códigos de la provincia con más coincidencias
+  // para evitar códigos postales homónimos en otras comunidades autónomas.
+  const prefixes = rawCodes.map(code => code.substring(0, 2));
+  const counts: Record<string, number> = {};
+  let maxPrefix = "";
+  let maxCount = 0;
+  
+  for (const prefix of prefixes) {
+    counts[prefix] = (counts[prefix] ?? 0) + 1;
+    if (counts[prefix] > maxCount) {
+      maxCount = counts[prefix];
+      maxPrefix = prefix;
+    }
+  }
+
+  const filtered = Array.from(new Set(rawCodes.filter(code => code.startsWith(maxPrefix))));
+  return filtered.sort();
 }
 
 

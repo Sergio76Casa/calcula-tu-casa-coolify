@@ -16,7 +16,7 @@ async function geocode(address: string): Promise<{ lat: number; lng: number } | 
     if (cached) return JSON.parse(cached) as { lat: number; lng: number };
 
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&addressdetails=0&countrycodes=es`;
-    const res  = await fetch(url, { headers: { "User-Agent": "ValorExacto/1.0" } });
+    const res  = await fetch(url, { headers: { "User-Agent": "CalculaTuCasa/1.0" } });
     const data = (await res.json()) as Array<{ lat: string; lon: string }>;
     if (!data[0]) return null;
     const result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };

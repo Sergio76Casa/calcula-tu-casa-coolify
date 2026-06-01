@@ -110,6 +110,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<ValoracionGem
       generationConfig: {
         temperature: 0.2,
         responseMimeType: "application/json",
+        maxOutputTokens: 350,
       },
     }),
   });
@@ -150,6 +151,55 @@ export async function POST(req: Request) {
       );
     }
 
+    // Normalizar el estado de conservación para soportar mayúsculas y espacios desde webhooks
+    const rawEstado = String(propiedad.estado_conservacion).toLowerCase().trim();
+    if (rawEstado.includes("nuevo")) {
+      propiedad.estado_conservacion = "nuevo";
+    } else if (rawEstado.includes("buen") || rawEstado === "bueno") {
+      propiedad.estado_conservacion = "bueno";
+    } else if (rawEstado.includes("regular")) {
+      propiedad.estado_conservacion = "regular";
+    } else if (rawEstado.includes("reformar") || rawEstado.includes("reforma") || rawEstado === "a_reformar") {
+      propiedad.estado_conservacion = "a_reformar";
+    } else {
+      // Por defecto
+      propiedad.estado_conservacion = "bueno";
+    }
+
+    // Normalizar m2_construidos a número (soporta que venga entrecomillado desde ManyChat)
+    propiedad.m2_construidos = Number(propiedad.m2_construidos);
+
+    // Normalizar habitaciones (soportando strings o vacíos desde ManyChat)
+    if (propiedad.habitaciones !== undefined && propiedad.habitaciones !== null) {
+      const habsVal = String(propiedad.habitaciones).trim();
+      if (habsVal === "" || habsVal === "undefined" || habsVal === "null") {
+        propiedad.habitaciones = undefined;
+      } else {
+        const parsedHabs = parseInt(habsVal, 10);
+        propiedad.habitaciones = isNaN(parsedHabs) ? undefined : parsedHabs;
+      }
+    }
+
+    // Normalizar ascensor (soportando strings o vacíos desde ManyChat)
+    if (propiedad.ascensor !== undefined && propiedad.ascensor !== null) {
+      const ascVal = String(propiedad.ascensor).trim().toLowerCase();
+      if (ascVal === "" || ascVal === "undefined" || ascVal === "null") {
+        propiedad.ascensor = undefined;
+      } else {
+        propiedad.ascensor = ascVal === "true" || ascVal === "1" || ascVal === "sí" || ascVal === "si";
+      }
+    }
+
+    // Normalizar jardin (soportando strings o vacíos desde ManyChat)
+    if (propiedad.jardin !== undefined && propiedad.jardin !== null) {
+      const jarVal = String(propiedad.jardin).trim().toLowerCase();
+      if (jarVal === "" || jarVal === "undefined" || jarVal === "null") {
+        propiedad.jardin = undefined;
+      } else {
+        propiedad.jardin = jarVal === "true" || jarVal === "1" || jarVal === "sí" || jarVal === "si";
+      }
+    }
+
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
     if (!GEMINI_API_KEY) {
       throw new Error("Variables de entorno no configuradas en el proyecto");
@@ -157,8 +207,28 @@ export async function POST(req: Request) {
 
     let propiedadId = propiedad.propiedad_id;
     if (!propiedadId) {
+      let enrichedAddress = propiedad.direccion_completa;
+      // If address doesn't contain a postal code, lookup on Nominatim to enrich it
+      if (!/\b\d{5}\b/.test(propiedad.direccion_completa)) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(propiedad.direccion_completa)}&format=json&limit=1&addressdetails=1&countrycodes=es`;
+          const res = await fetch(url, { 
+            headers: { "User-Agent": "CalculaTuCasa/1.0" },
+            signal: AbortSignal.timeout(1800)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data[0] && data[0].display_name) {
+              enrichedAddress = data[0].display_name;
+            }
+          }
+        } catch (err) {
+          console.error("[Geocoding address enrichment error]", err);
+        }
+      }
+
       const newProp = await pbCreate("propiedades", {
-        direccion_completa:     propiedad.direccion_completa,
+        direccion_completa:     enrichedAddress,
         m2_construidos:         propiedad.m2_construidos,
         estado_conservacion:    propiedad.estado_conservacion,
         tipo_propiedad:         propiedad.tipo_propiedad || null,
@@ -168,6 +238,8 @@ export async function POST(req: Request) {
         certificado_energetico: propiedad.certificado_energetico || null,
       });
       propiedadId = newProp.id;
+      // Update property object so subsequent uses (like in prompts) use the enriched address
+      propiedad.direccion_completa = enrichedAddress;
     }
 
     const valoracion = await callGemini(buildPrompt(propiedad, testigos, lang), GEMINI_API_KEY);

@@ -10,6 +10,7 @@ import ValuationDashboard    from "@/components/landing/ValuationDashboard";
 import LanguageSelector      from "@/components/LanguageSelector";
 import SocialProofToast      from "@/components/SocialProofToast";
 import { type Lang, type Variant } from "@/lib/translations";
+import { trackPixelEvent }   from "@/components/MetaPixel";
 
 // ─── Tipos y helpers ──────────────────────────────────────────────────────────
 
@@ -62,13 +63,17 @@ function HomeInner({ variant }: { variant: Variant }) {
   return (
     <>
       <LanguageSelector lang={lang} onChange={setLang} />
-      <SocialProofToast lang={lang} />
+      <SocialProofToast lang={lang} currentAddress={address} />
 
       {step === 1 && (
         <HeroSection
           lang={lang}
           variant={variant}
-          onNext={(addr) => { setAddress(addr); setStep(2); }}
+          onNext={(addr) => {
+            setAddress(addr);
+            setStep(2);
+            trackPixelEvent("IniciarValoracion", { address: addr });
+          }}
         />
       )}
       {step === 2 && (
@@ -100,6 +105,7 @@ function HomeInner({ variant }: { variant: Variant }) {
             setTelefonoInicial(tel);
             setLeadNombre(name);
             setStep(5); 
+            trackPixelEvent("Lead", { id, name });
           }}
         />
       )}

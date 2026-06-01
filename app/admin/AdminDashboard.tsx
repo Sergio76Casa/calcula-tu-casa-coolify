@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { pbClient } from "@/lib/pocketbase-client";
 import LoginGate   from "./LoginGate";
 import MetricsRow, { type Metrics } from "./MetricsRow";
 import LeadsTable,  { type LeadRow }  from "./LeadsTable";
 import BannersAdmin from "./BannersAdmin";
+import NamesAdmin from "./NamesAdmin";
+import AgenciesAdmin from "./AgenciesAdmin";
 
 const AdminMap = dynamic(() => import("./AdminMap"), { ssr: false });
 
@@ -55,10 +58,28 @@ export default function AdminDashboard() {
       const valData = await pbClient.collection("valoraciones").getFullList();
       const valMap = new Map();
       valData.forEach(v => valMap.set(v.propiedad_id, v));
+
+      // Obtener asignación de zonas e inmobiliarias
+      const zonesData = await pbClient.collection("zonas_inmobiliarias").getFullList({
+        expand: "inmobiliaria_id"
+      });
+      const zonesMap = new Map();
+      zonesData.forEach((z: any) => {
+        const agency = z.expand?.inmobiliaria_id;
+        if (agency && agency.estado) {
+          zonesMap.set(z.codigo_postal, agency);
+        }
+      });
       
       const flat: LeadRow[] = leadsData.map((r: any) => {
         const val = valMap.get(r.propiedad_id);
         const prop = r.expand?.propiedad_id;
+        
+        // Extraer CP de la dirección completa
+        const cpMatch = prop?.direccion_completa?.match(/\b\d{5}\b/);
+        const cp = cpMatch ? cpMatch[0] : null;
+        const assignedAgency = cp ? zonesMap.get(cp) : null;
+
         return {
           id: r.id, created_at: r.created,
           nombre: r.nombre, telefono: r.telefono, telefono_final: r.telefono_final, email: r.email,
@@ -68,6 +89,8 @@ export default function AdminDashboard() {
           direccion: prop?.direccion_completa,
           certificado_energetico: prop?.certificado_energetico,
           precio: val?.precio_sugerido,
+          assigned_agency: assignedAgency ? assignedAgency.nombre : null,
+          sent_status: assignedAgency ? "Enviado" : "No enviado",
           raw_propiedad: prop ? {
             m2: prop.m2_construidos,
             estado: prop.estado_conservacion,
@@ -136,13 +159,21 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-slate-950/90 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-black text-white tracking-tight">ValorExacto Admin</h1>
+          <h1 className="text-lg font-black text-white tracking-tight">CalculaTuCasa Admin</h1>
           <p className="text-slate-500 text-xs">Panel de control · Leads en tiempo real</p>
         </div>
-        <button onClick={handleLogout}
-          className="px-4 py-2 text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/30 rounded-xl transition-colors">
-          Cerrar sesión
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/roadmap"
+            className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-1.5"
+          >
+            🧭 Ver Roadmap
+          </Link>
+          <button onClick={handleLogout}
+            className="px-4 py-2 text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/30 rounded-xl transition-colors">
+            Cerrar sesión
+          </button>
+        </div>
       </header>
 
       <main className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -158,6 +189,12 @@ export default function AdminDashboard() {
 
         {/* Social Proof Banners */}
         <BannersAdmin />
+
+        {/* Social Proof Names */}
+        <NamesAdmin />
+
+        {/* Agencies Administration */}
+        <AgenciesAdmin />
 
         {/* Map */}
         {mapPins.length > 0 && (

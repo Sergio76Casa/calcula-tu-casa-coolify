@@ -22,6 +22,8 @@ export interface LeadRow {
   certificado_energetico?: string | null;
   raw_propiedad?:         any;
   raw_valoracion?:        any;
+  assigned_agency?:       string | null;
+  sent_status?:           string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,7 +67,7 @@ function Cell({ children, className = "", title }: { children: React.ReactNode; 
 function exportCSV(rows: LeadRow[]) {
   const headers = [
     "Fecha","Nombre","Email","Tel. 1","Tel. Final","Dirección","Cert. Energético","Valoración €",
-    "A/B","UTM Source","UTM Campaign","PDF","Urgencia","Estado venta",
+    "A/B","UTM Source","UTM Campaign","PDF","Urgencia","Estado venta","Estado Envío","Agencia Asignada","Fecha Envío"
   ];
   const body = rows.map(l => [
     fmt(l.created_at), l.nombre, l.email, l.telefono, l.telefono_final ?? "",
@@ -77,6 +79,9 @@ function exportCSV(rows: LeadRow[]) {
     l.pdf_downloaded ? "Sí" : "No",
     URGENCIA_LABEL[l.venta_urgencia ?? ""] ?? l.venta_urgencia ?? "",
     l.venta_estado ?? "",
+    l.sent_status ?? "No enviado",
+    l.assigned_agency ?? "—",
+    l.sent_status === "Enviado" ? fmt(l.created_at) : "—"
   ]);
   const csv = "﻿" + [headers, ...body]
     .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";"))
@@ -89,7 +94,7 @@ function exportCSV(rows: LeadRow[]) {
 
 // ─── Columnas visibles ────────────────────────────────────────────────────────
 
-const HEADERS = ["Fecha","Nombre","Email","Tel. 1","Tel. Final","Dirección","Cert.","€","A/B","PDF","Urgencia"];
+const HEADERS = ["Fecha","Nombre","Email","Tel. 1","Tel. Final","Dirección","Cert.","€","A/B","PDF","Urgencia","Envío"];
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
@@ -139,9 +144,9 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
         </button>
       </div>
 
-      {/* Table — sin overflow-x para evitar scroll horizontal */}
-      <div className="w-full">
-        <table className="w-full text-xs table-fixed">
+      {/* Table — con overflow-x-auto para permitir scroll horizontal en móviles sin romper el layout */}
+      <div className="w-full overflow-x-auto">
+        <table className="w-full text-xs table-fixed min-w-[940px]">
           <colgroup>
             <col className="w-[82px]" />   {/* Fecha */}
             <col className="w-[90px]" />   {/* Nombre */}
@@ -154,6 +159,7 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
             <col className="w-[36px]" />   {/* A/B */}
             <col className="w-[36px]" />   {/* PDF */}
             <col className="w-[66px]" />   {/* Urgencia */}
+            <col className="w-[110px]" />  {/* Envío */}
           </colgroup>
           <thead>
             <tr className="border-b border-white/10 text-left">
@@ -167,7 +173,7 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
           <tbody className="divide-y divide-white/5">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-10 text-center text-slate-600 text-xs">
+                <td colSpan={12} className="px-4 py-10 text-center text-slate-600 text-xs">
                   {q ? "Sin resultados." : "Aún no hay leads registrados."}
                 </td>
               </tr>
@@ -218,6 +224,26 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
                   {l.venta_urgencia
                     ? <Badge text={URGENCIA_LABEL[l.venta_urgencia] ?? l.venta_urgencia} cls="bg-amber-500/20 text-amber-400" />
                     : <span className="text-slate-600">—</span>}
+                </Cell>
+                <Cell className="text-left py-1">
+                  {l.sent_status === "Enviado" ? (
+                    <div className="space-y-0.5">
+                      <Badge text="Enviado" cls="bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" />
+                      <div className="text-[10px] text-white truncate font-medium" title={l.assigned_agency || ""}>
+                        {l.assigned_agency}
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-mono">
+                        {fmt(l.created_at)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5">
+                      <Badge text="No enviado" cls="bg-slate-800 text-slate-400 border border-white/5" />
+                      <div className="text-[10px] text-slate-500 truncate">
+                        Sin agencia
+                      </div>
+                    </div>
+                  )}
                 </Cell>
               </tr>
             ))}
