@@ -125,7 +125,13 @@ async function callGemini(prompt: string, apiKey: string): Promise<ValoracionGem
 
   if (!raw) throw new Error("Gemini devolvió una respuesta vacía");
 
-  const parsed = JSON.parse(raw) as ValoracionGemini;
+  let parsed: ValoracionGemini;
+  try {
+    parsed = JSON.parse(raw) as ValoracionGemini;
+  } catch (parseErr: any) {
+    console.error("[api/valorar] Gemini JSON parse error:", parseErr.message, "Raw output:", raw);
+    throw new Error(`Gemini JSON Parse Error: ${parseErr.message}. Raw output from Gemini: [${raw}]`);
+  }
 
   if (
     typeof parsed.precio_sugerido !== "number" ||

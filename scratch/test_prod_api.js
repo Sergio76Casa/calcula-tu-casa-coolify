@@ -1,14 +1,13 @@
 async function testProd() {
   const payload = {
     propiedad: {
-      direccion_completa: "{{cuf_14645725}}",
-      m2_construidos: "{{cuf_14645731}}",
-      estado_conservacion: "{{cuf_14645733}}",
-      tipo_propiedad: "{{cuf_14645734}}",
-      habitaciones: "{{cuf_14645735}}",
-      ascensor: "{{cuf_14645736}}",
-      jardin: "{{cuf_14645737}}",
-      certificado_energetico: "{{cuf_14645738}}"
+      direccion_completa: "Calle de Alcalá 1, Madrid 28014",
+      m2_construidos: "90",
+      estado_conservacion: "bueno",
+      tipo_propiedad: "piso",
+      habitaciones: "3",
+      ascensor: "true",
+      jardin: "false"
     },
     lang: "es"
   };
