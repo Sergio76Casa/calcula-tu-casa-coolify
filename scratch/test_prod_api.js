@@ -1,28 +1,26 @@
 async function testProd() {
   const payload = {
     propiedad: {
-      direccion_completa: "Calle de Alcalá 1, Madrid 28014",
-      m2_construidos: "90",
-      estado_conservacion: "bueno",
-      tipo_propiedad: "piso",
-      habitaciones: "3",
-      ascensor: "true",
-      jardin: "false"
+      direccion_completa: "{{cuf_14645725}}",
+      m2_construidos: "{{cuf_14645731}}",
+      estado_conservacion: "{{cuf_14645733}}",
+      tipo_propiedad: "{{cuf_14645734}}",
+      habitaciones: "{{cuf_14645735}}",
+      ascensor: "{{cuf_14645736}}",
+      jardin: "{{cuf_14645737}}",
+      certificado_energetico: "{{cuf_14645738}}"
     },
     lang: "es"
   };
 
   console.log("Sending request to https://calculatucasa.com/api/valorar ...");
-  const start = Date.now();
   try {
     const res = await fetch("https://calculatucasa.com/api/valorar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start;
     console.log(`Status: ${res.status} (${res.statusText})`);
-    console.log(`Time taken: ${duration}ms`);
     const text = await res.text();
     console.log("Response body:", text);
   } catch (err) {
