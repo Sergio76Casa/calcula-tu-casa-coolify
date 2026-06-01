@@ -141,7 +141,18 @@ async function callGemini(prompt: string, apiKey: string): Promise<ValoracionGem
 
 export async function POST(req: Request) {
   try {
-    const body: RequestBody = await req.json();
+    const rawBody = await req.text();
+    let body: RequestBody;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (parseErr: any) {
+      console.error("[api/valorar] JSON parse error:", parseErr.message, "Raw body:", rawBody);
+      return NextResponse.json(
+        { error: `JSON Parse Error: ${parseErr.message}. Raw body received: [${rawBody}]` },
+        { status: 400 }
+      );
+    }
+
     const { propiedad, testigos = [], lang = "es" } = body;
 
     if (!propiedad?.direccion_completa || !propiedad?.m2_construidos || !propiedad?.estado_conservacion) {
