@@ -111,6 +111,22 @@ async function callGemini(prompt: string, apiKey: string): Promise<ValoracionGem
         temperature: 0.2,
         responseMimeType: "application/json",
         maxOutputTokens: 1000,
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            precio_sugerido: { type: "INTEGER" },
+            rango_precios: {
+              type: "OBJECT",
+              properties: {
+                minimo: { type: "INTEGER" },
+                maximo: { type: "INTEGER" }
+              },
+              required: ["minimo", "maximo"]
+            },
+            argumentario_venta: { type: "STRING" }
+          },
+          required: ["precio_sugerido", "rango_precios", "argumentario_venta"]
+        }
       },
     }),
   });
