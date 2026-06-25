@@ -34,10 +34,11 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
   const [address, setAddress]       = useState("");
   const [error,   setError]         = useState("");
   const [todayCount, setTodayCount] = useState<number | null>(null);
-  const [activeUsers] = useState(() => Math.floor(Math.random() * 15) + 12);
+  const [activeUsers, setActiveUsers] = useState(18);
 
-  // Fetch stats en tiempo real
+  // Fetch stats en tiempo real y establecer usuarios activos en cliente
   useEffect(() => {
+    setActiveUsers(Math.floor(Math.random() * 15) + 12);
     let alive = true;
     fetch("/api/stats")
       .then((r) => r.ok ? r.json() : null)

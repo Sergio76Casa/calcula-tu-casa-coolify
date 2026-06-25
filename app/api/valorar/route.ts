@@ -733,24 +733,41 @@ export async function POST(req: Request) {
         const valsExistentes = await pbList("valoraciones", filterVal);
         if (valsExistentes && valsExistentes.length > 0) {
           const valDb = valsExistentes[valsExistentes.length - 1];
-          cachedVal = valDb;
-          propiedadId = propDb.id;
 
+          let cachedEntornoTemp: EntornoData | null = null;
           if (propDb.entorno_json) {
             try {
-              cachedEntorno = JSON.parse(propDb.entorno_json) as EntornoData;
+              cachedEntornoTemp = JSON.parse(propDb.entorno_json) as EntornoData;
+              if (cachedEntornoTemp && !cachedEntornoTemp.origen) {
+                cachedEntornoTemp.origen = "overpass";
+              }
             } catch (e) {
               console.error("[Caché] Error parseando entorno_json", e);
             }
           }
-          if (valDb.analisis_barrio_json) {
-            try {
-              cachedAnalisisBarrio = JSON.parse(valDb.analisis_barrio_json) as AnalisisBarrio;
-            } catch (e) {
-              console.error("[Caché] Error parseando analisis_barrio_json", e);
+
+          // Contamos los POIs
+          const totalPOIs = cachedEntornoTemp
+            ? Object.values(cachedEntornoTemp).filter(Array.isArray).flat().length
+            : 0;
+
+          // Ignoramos la caché si el entorno está vacío (repara datos de fallos antiguos)
+          if (totalPOIs > 0) {
+            cachedVal = valDb;
+            propiedadId = propDb.id;
+            cachedEntorno = cachedEntornoTemp;
+
+            if (valDb.analisis_barrio_json) {
+              try {
+                cachedAnalisisBarrio = JSON.parse(valDb.analisis_barrio_json) as AnalisisBarrio;
+              } catch (e) {
+                console.error("[Caché] Error parseando analisis_barrio_json", e);
+              }
             }
+            console.log(`[Caché] Coincidencia encontrada. Reutilizando valoración ${valDb.id}`);
+          } else {
+            console.log("[Caché] Coincidencia encontrada en BD pero con entorno vacío. Ignoramos la caché para recalcular y reparar los datos.");
           }
-          console.log(`[Caché] Coincidencia encontrada. Reutilizando valoración ${valDb.id}`);
         }
       }
     } catch (cacheErr) {
