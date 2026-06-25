@@ -34,6 +34,24 @@ function IconHome() {
   );
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function formatSuggestion(displayName: string): string {
+  // Nominatim devuelve: "Calle X, 28, Ciudad, Provincia, CC.AA., España"
+  // Queremos: "Calle X, 28, Ciudad"
+  const parts = displayName.split(",").map((p) => p.trim());
+  const stopWords = [
+    'España', 'Spain', 'Espanya', 'Catalunya', 'Cataluña', 'Andalucía', 'Madrid',
+    'Comunitat Valenciana', 'País Vasco', 'Galicia', 'Castilla', 'Aragón', 'Murcia',
+    'Navarra', 'Asturias', 'Cantabria', 'Rioja', 'Extremadura', 'Baleares', 'Canarias',
+    'Ceuta', 'Melilla',
+  ];
+  const filtered = parts.filter(
+    (p) => !stopWords.some((sw) => p.toLowerCase().includes(sw.toLowerCase()))
+  );
+  return filtered.slice(0, 3).join(", ");
+}
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function AddressInput({ value, placeholder, onChange }: AddressInputProps) {
@@ -127,7 +145,7 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
                   className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-colors flex items-start gap-2"
                 >
                   <span className="text-emerald-400 flex-shrink-0 mt-0.5 text-xs">📍</span>
-                  <span className="line-clamp-2 leading-snug">{s.display_name}</span>
+                  <span className="line-clamp-2 leading-snug">{formatSuggestion(s.display_name)}</span>
                 </button>
               </li>
             ))}

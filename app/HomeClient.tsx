@@ -9,6 +9,7 @@ import LeadCaptureStep       from "@/components/landing/LeadCaptureStep";
 import ValuationDashboard    from "@/components/landing/ValuationDashboard";
 import LanguageSelector      from "@/components/LanguageSelector";
 import SocialProofToast      from "@/components/SocialProofToast";
+import ExitIntentModal       from "@/components/ExitIntentModal";
 import { type Lang, type Variant } from "@/lib/translations";
 import { trackPixelEvent }   from "@/components/MetaPixel";
 
@@ -39,6 +40,7 @@ function HomeInner({ variant }: { variant: Variant }) {
   const searchParams  = useSearchParams();
   const utmSource     = searchParams.get("utm_source")   ?? "";
   const utmCampaign   = searchParams.get("utm_campaign") ?? "";
+  const utmName       = searchParams.get("utm_name")     ?? "";
 
   useEffect(() => { setLang(detectLang()); }, []);
 
@@ -98,6 +100,7 @@ function HomeInner({ variant }: { variant: Variant }) {
           utmSource={utmSource}
           utmCampaign={utmCampaign}
           result={result}
+          prefillName={utmName}
           onBack={() => setStep(2)}
           onFinish={(id, tel, name) => { 
             console.log("DEBUG - HomeClient recibiendo onFinish:", { id, tel, name });
@@ -107,6 +110,12 @@ function HomeInner({ variant }: { variant: Variant }) {
             setStep(5); 
             trackPixelEvent("Lead", { id, name });
           }}
+        />
+      )}
+      {step === 4 && result && (
+        <ExitIntentModal
+          price={result.precio_sugerido}
+          onStay={() => {/* ya está en step 4 */}}
         />
       )}
       {step === 5 && result && details && (

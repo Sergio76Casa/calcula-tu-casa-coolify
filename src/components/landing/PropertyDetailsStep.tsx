@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { T, type Lang } from "@/lib/translations";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -135,6 +135,36 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
   const [jardin, setJardin]         = useState(false);
   const [energyCert, setEnergyCert] = useState<EnergyCertificate | null>(null);
   const [errors, setErrors]         = useState<Record<string, string>>({});
+  const [estimatedRange, setEstimatedRange] = useState<{ min: number; max: number } | null>(null);
+
+  // Preview de precio estimado mientras rellena
+  function calcEstimatedRange(
+    sqm: number,
+    tipoVal: TipoPropiedad | null,
+    estadoVal: EstadoConservacion | null,
+    habs: number | null
+  ): { min: number; max: number } {
+    const BASE_PRICE_M2 = 2500;
+    const stateMultiplier = ({ nuevo: 1.2, bueno: 1.0, a_reformar: 0.75 } as Record<string, number>)[estadoVal ?? "bueno"] ?? 1.0;
+    const typeMultiplier  = tipoVal === "casa" ? 1.15 : 1.0;
+    const habMultiplier   = !habs ? 1 : habs >= 4 ? 1.1 : habs === 1 ? 0.9 : 1.0;
+    const base = sqm * BASE_PRICE_M2 * stateMultiplier * typeMultiplier * habMultiplier;
+    return {
+      min: Math.round(base * 0.85 / 1000) * 1000,
+      max: Math.round(base * 1.15 / 1000) * 1000,
+    };
+  }
+
+  useEffect(() => {
+    const num = parseInt(m2);
+    if (!isNaN(num) && num >= 20) {
+      setEstimatedRange(calcEstimatedRange(num, tipo, estado, habitaciones));
+    } else {
+      setEstimatedRange(null);
+    }
+  }, [m2, tipo, estado, habitaciones]);
+
+  const completedFields = [m2 && parseInt(m2) >= 10, tipo, habitaciones, estado].filter(Boolean).length;
 
   function clearErr(k: string) { setErrors((e) => { const n = { ...e }; delete n[k]; return n; }); }
 
@@ -175,8 +205,17 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
         <div className="flex items-center gap-2 mb-7">
           <button onClick={onBack} type="button" className="text-slate-400 hover:text-white text-sm transition-colors">{tf.back}</button>
           <span className="text-slate-600 text-sm ml-auto">{tf.stepIndicator}</span>
-          <div className="flex gap-1">
-            {[1,2,3,4].map((s) => <span key={s} className={`h-1.5 w-6 rounded-full ${s <= 2 ? "bg-blue-400" : "bg-slate-700"}`} />)}
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex gap-1">
+              {[1,2,3,4].map((s) => <span key={s} className={`h-1.5 w-6 rounded-full ${s <= completedFields ? "bg-blue-400" : "bg-slate-700"}`} />)}
+            </div>
+            <p className="text-xs text-slate-500 text-center mt-1">
+              {completedFields === 0 && 'Solo 2 minutos para conocer el valor de tu casa'}
+              {completedFields === 1 && '¡Bien! Continúa para ver tu valoración'}
+              {completedFields === 2 && '¡Vas muy bien! Ya casi tienes tu valoración'}
+              {completedFields === 3 && '¡Casi! Un dato más y estará lista'}
+              {completedFields >= 4 && '✓ ¡Perfecto! Estás listo para ver tu precio'}
+            </p>
           </div>
         </div>
 
@@ -267,6 +306,17 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
               onChange={setEnergyCert}
             />
           </div>
+
+          {/* Estimación preliminar */}
+          {estimatedRange && (
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-400 mb-1">Estimación preliminar orientativa</p>
+              <p className="text-emerald-400 font-bold text-lg">
+                {estimatedRange.min.toLocaleString('es-ES')} — {estimatedRange.max.toLocaleString('es-ES')} €
+              </p>
+              <p className="text-xs text-slate-500 mt-1">La IA refinará este precio con datos reales del mercado</p>
+            </div>
+          )}
 
           <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-400 hover:to-emerald-400 text-white font-bold text-lg rounded-xl transition-all duration-200 active:scale-[0.98] shadow-lg shadow-blue-500/30 mt-2">
             {tf.cta}

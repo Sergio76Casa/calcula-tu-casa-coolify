@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { T, type Lang, type Variant } from "@/lib/translations";
 import AddressInput from "./AddressInput";
 
@@ -31,8 +31,20 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
   const subtitleBold = b?.subtitleBold ?? base.subtitleBold;
   const cta          = b?.cta          ?? base.cta;
 
-  const [address, setAddress] = useState("");
-  const [error,   setError]   = useState("");
+  const [address, setAddress]       = useState("");
+  const [error,   setError]         = useState("");
+  const [todayCount, setTodayCount] = useState<number | null>(null);
+  const [activeUsers] = useState(() => Math.floor(Math.random() * 15) + 12);
+
+  // Fetch stats en tiempo real
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/stats")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (alive && data?.today != null) setTodayCount(data.today as number); })
+      .catch(() => {/* silencioso */});
+    return () => { alive = false; };
+  }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,10 +63,16 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
 
       <div className="relative z-10 w-full max-w-4xl mx-auto px-4 py-24 text-center">
 
-        {/* Indicador live */}
+        {/* Indicador live — stats en tiempo real */}
         <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-8">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-blue-200 text-sm font-medium tracking-wide">{base.badge}</span>
+          {todayCount !== null ? (
+            <span className="text-blue-200 text-sm font-medium tracking-wide">
+              {todayCount} valoraciones realizadas hoy
+            </span>
+          ) : (
+            <span className="text-blue-200 text-sm font-medium tracking-wide">{base.badge}</span>
+          )}
         </div>
 
         {/* Titular */}
@@ -73,7 +91,7 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
         </p>
 
         {/* Badges */}
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
+        <div className="flex flex-wrap justify-center gap-3 mb-6">
           {base.badges.map((badge) => (
             <span key={badge} className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-3 py-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -82,6 +100,14 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
               {badge}
             </span>
           ))}
+        </div>
+
+        {/* Usuarios activos ahora */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-400 text-sm">
+            {activeUsers} personas valorando ahora mismo
+          </span>
         </div>
 
         {/* Formulario con AddressInput + mapa integrado */}
@@ -102,10 +128,25 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
             </div>
           </div>
           {error && <p role="alert" className="mt-3 text-red-400 text-sm text-left pl-2">{error}</p>}
+
+          {/* Timeline visual del proceso */}
+          <div className="flex items-center justify-center gap-1 mt-3 text-xs text-slate-500">
+            <span>📍 Dirección</span>
+            <span className="text-slate-700">→</span>
+            <span>🏠 2 datos</span>
+            <span className="text-slate-700">→</span>
+            <span>⏳ 30 seg</span>
+            <span className="text-slate-700">→</span>
+            <span className="text-emerald-500 font-semibold">🎯 Tu precio</span>
+          </div>
         </form>
 
-        {/* Privacidad */}
-        <p className="text-slate-500 text-xs mb-16">{base.privacy}</p>
+        {/* Badges de seguridad */}
+        <div className="flex flex-wrap justify-center gap-3 mb-16">
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-white/5 border border-white/10 rounded-full px-3 py-1">🔒 SSL Seguro</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-white/5 border border-white/10 rounded-full px-3 py-1">🚫 Sin spam</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-white/5 border border-white/10 rounded-full px-3 py-1">📵 No cedemos datos</span>
+        </div>
 
         {/* Estadísticas */}
         <div className="grid grid-cols-3 gap-6 max-w-md mx-auto">

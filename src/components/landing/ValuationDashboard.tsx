@@ -143,7 +143,6 @@ function RangeBar({ min, mid, max }: { min: number; mid: number; max: number }) 
 export default function ValuationDashboard({ 
   result, details, address, lang = "es", leadId, telefonoInicial, leadNombre, onReset 
 }: ValuationDashboardProps) {
-  console.log("DEBUG - ValuationDashboard recibiendo props:", { leadId, telefonoInicial, leadNombre });
   const { precio_sugerido: mid, rango_precios: { minimo: min, maximo: max }, argumentario_venta } = result;
   const { pros, cons }                   = getHighlights(details);
   const { strengths, concerns, energy }  = classifyGemini(argumentario_venta);
@@ -152,29 +151,41 @@ export default function ValuationDashboard({
   const [pdfLoading,    setPdfLoading]    = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
 
+  // Métricas nuevas con fallbacks seguros
+  const pm2           = result.precio_por_m2_zona;
+  const alquiler      = result.precio_alquiler_estimado;
+  const rentabilidad  = result.rentabilidad_bruta_pct;
+  const tendencia     = result.tendencia_mercado_12m;
+  const score         = result.score_inversion;
+  const entorno       = result.entorno;
+  const analisisB     = result.analisis_barrio;
+
+  // Categorías del entorno con emojis y etiquetas
+  const CATS = [
+    { key: "colegios",      label: "Colegios",     emoji: "🏫" },
+    { key: "supermercados", label: "Supermercados", emoji: "🛒" },
+    { key: "farmacias",     label: "Farmacias",     emoji: "💊" },
+    { key: "transporte",    label: "Transporte",    emoji: "🚇" },
+    { key: "parques",       label: "Parques",       emoji: "🌳" },
+    { key: "restaurantes",  label: "Restaurantes",  emoji: "🍽️" },
+    { key: "gasolineras",   label: "Gasolineras",   emoji: "⛽" },
+    { key: "salud",         label: "Salud",         emoji: "🏥" },
+  ] as const;
+
   async function handleDownloadPDF() {
     setPdfLoading(true);
     try {
       const { generatePDF } = await import("@/lib/generatePDF");
-      
-      let userName = leadNombre || null;
+      const userName = leadNombre || null;
       if (leadId) {
-        // 1. Marcar como descargado vía API
         fetch("/api/lead", {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            leadId,
-            action: "download",
-          }),
-        }).catch((err) => {
-          console.error("Error marking PDF downloaded:", err);
-        });
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadId, action: "download" }),
+        }).catch((err) => { console.error("Error marking PDF downloaded:", err); });
       }
-      
-      await generatePDF(result, details, address, lang, userName);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await generatePDF(result, details, address, lang, userName, entorno as any, analisisB ?? null);
     } finally {
       setPdfLoading(false);
     }
@@ -194,13 +205,55 @@ export default function ValuationDashboard({
           <p className="text-slate-400 text-sm mt-1 truncate">📍 {address}</p>
         </div>
 
-        {/* Precio + rango */}
+        {/* Precio + rango + métricas */}
         <div className="bg-slate-800/60 border border-emerald-500/20 rounded-2xl p-6 text-center backdrop-blur-sm">
           <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Valor de mercado estimado</p>
           <p className="text-4xl min-[380px]:text-5xl sm:text-6xl md:text-7xl font-black text-emerald-400 tabular-nums my-3"
             style={{ textShadow: "0 0 25px rgba(52,211,153,0.7), 0 0 60px rgba(52,211,153,0.35)" }}>
             {mid.toLocaleString("es-ES")} €
           </p>
+
+          {/* Badges de métricas */}
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            {pm2 && (
+              <span className="inline-flex items-center gap-1 text-xs bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-full px-2.5 py-1">
+                📐 ~{pm2.toLocaleString("es-ES")} €/m²
+              </span>
+            )}
+            {alquiler && (
+              <span className="inline-flex items-center gap-1 text-xs bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-full px-2.5 py-1">
+                🏠 Alquiler ~{alquiler.toLocaleString("es-ES")} €/mes
+              </span>
+            )}
+            {rentabilidad && (
+              <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 ${
+                rentabilidad >= 5
+                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+                  : "bg-amber-500/10 border border-amber-500/20 text-amber-300"
+              }`}>
+                📈 Rentab. {rentabilidad.toFixed(1)}%
+              </span>
+            )}
+            {score !== undefined && (
+              <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 ${
+                score >= 7 ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+                : score >= 5 ? "bg-amber-500/10 border border-amber-500/20 text-amber-300"
+                : "bg-red-500/10 border border-red-500/20 text-red-300"
+              }`}>
+                ⭐ Score inversión: {score}/10
+              </span>
+            )}
+            {tendencia !== undefined && (
+              <span className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 ${
+                tendencia > 0
+                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+                  : "bg-red-500/10 border border-red-500/20 text-red-300"
+              }`}>
+                {tendencia > 0 ? "↑" : "↓"} {Math.abs(tendencia).toFixed(1)}% en 12 meses
+              </span>
+            )}
+          </div>
+
           <p className="text-slate-500 text-xs mb-8">Calculado con Gemini 2.5 Flash · datos reales del mercado</p>
           <RangeBar min={min} mid={mid} max={max} />
         </div>
@@ -231,7 +284,75 @@ export default function ValuationDashboard({
           </div>
         </div>
 
-        {/* Certificado Energético — siempre visible, letra del usuario resaltada */}
+        {/* Sección Tu Barrio */}
+        {(entorno || analisisB) && (
+          <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">📍 Tu barrio en detalle</p>
+
+            {/* Puntuación de servicios */}
+            {analisisB && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-white font-semibold">{analisisB.tipo_barrio}</span>
+                  <span className={`text-sm font-black ${
+                    analisisB.puntuacion_servicios >= 7 ? "text-emerald-400"
+                    : analisisB.puntuacion_servicios >= 5 ? "text-amber-400"
+                    : "text-red-400"
+                  }`}>{analisisB.puntuacion_servicios}/10</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-400 to-emerald-400 rounded-full transition-all"
+                    style={{ width: `${analisisB.puntuacion_servicios * 10}%` }}
+                  />
+                </div>
+                <p className="text-slate-400 text-xs mt-2 leading-relaxed">{analisisB.descripcion}</p>
+              </div>
+            )}
+
+            {/* Grid de servicios */}
+            {entorno && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                {CATS.map(({ key, label, emoji }) => {
+                  const pois = (entorno as Record<string, { nombre: string; distancia_m: number }[]>)[key];
+                  const first = pois?.[0];
+                  return (
+                    <div key={key} className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
+                      <span className="text-lg block mb-1" aria-hidden>{emoji}</span>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
+                      {first ? (
+                        <>
+                          <p className="text-xs text-white font-medium leading-tight line-clamp-1">{first.nombre || label}</p>
+                          <p className="text-[10px] text-emerald-400 mt-0.5">{first.distancia_m < 1000 ? `${first.distancia_m}m` : `${(first.distancia_m/1000).toFixed(1)}km`}</p>
+                        </>
+                      ) : (
+                        <p className="text-[10px] text-slate-600">No encontrado</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Ventajas de ubicación */}
+            {(() => {
+              const ventajas = analisisB?.ventajas_ubicacion;
+              if (!ventajas || ventajas.length === 0 || !analisisB) return null;
+              return (
+                <ul className="space-y-1.5">
+                  {ventajas.map((v, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                      <span className="text-emerald-400 flex-shrink-0 mt-0.5">✓</span>
+                      <span>{v}</span>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Certificado Energético */}
         <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">⚡ Certificado Energético</p>
           <EnergyScale cert={details.energyCertificate} />

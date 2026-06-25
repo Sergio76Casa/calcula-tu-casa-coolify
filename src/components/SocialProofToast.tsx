@@ -98,6 +98,36 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// ─── Precio estimado por zona ──────────────────────────────────────────────────
+
+const PRICE_RANGES: Record<string, [number, number]> = {
+  madrid:    [250000, 650000],
+  barcelona: [220000, 700000],
+  valencia:  [120000, 350000],
+  malaga:    [150000, 500000],
+  sevilla:   [120000, 400000],
+  alicante:  [100000, 350000],
+  zaragoza:  [100000, 280000],
+  default:   [120000, 400000],
+};
+
+function getRandomPrice(city: string | null, region: string | null): string {
+  const key = getMatchedRegionKey(city, region) ?? "default";
+  const [min, max] = PRICE_RANGES[key] ?? PRICE_RANGES.default;
+  const raw = Math.random() * (max - min) + min;
+  const rounded = Math.round(raw / 1000) * 1000;
+  return rounded.toLocaleString("es-ES") + " €";
+}
+
+const TOAST_PHRASES = [
+  (name: string, loc: string, price: string) =>
+    `${name} de ${loc} acaba de descubrir que su piso vale ~${price}`,
+  (name: string, loc: string, price: string) =>
+    `${name} de ${loc} acaba de valorar su vivienda: ~${price}`,
+  (name: string, loc: string, price: string) =>
+    `${name} de ${loc} conoce ya el valor de su casa: ~${price}`,
+];
+
 function getMatchedRegionKey(city: string | null, region: string | null): string | null {
   const c = city ? normalizeStr(city) : "";
   const r = region ? normalizeStr(region) : "";
@@ -182,9 +212,10 @@ export default function SocialProofToast({ lang, currentAddress }: SocialProofTo
   const [location, setLocation] = useState<string | null>(null);
   const [name,     setName]     = useState("");
   const [names,    setNames]    = useState<string[]>(FALLBACK_NAMES);
-  const localPoolRef = useRef<string[]>([]);
+  const [toastText, setToastText] = useState("");
+  const localPoolRef  = useRef<string[]>([]);
+  const userLocRef    = useRef<{ city: string | null; region: string | null }>({ city: null, region: null });
   const t         = U(lang).toast;
-  const connector = lang === "en" ? "in" : "de";
 
   useEffect(() => {
     let alive = true;
@@ -200,6 +231,7 @@ export default function SocialProofToast({ lang, currentAddress }: SocialProofTo
         setNames(nameData);
       }
       
+      userLocRef.current = { city: locData.city, region: locData.region };
       const pool = resolveLocalPool(locData.city, locData.region, banners, locData.postal);
       localPoolRef.current = pool;
     })();
@@ -241,8 +273,15 @@ export default function SocialProofToast({ lang, currentAddress }: SocialProofTo
       chosenLocation = pickRandom(NATIONAL_LOCATIONS);
     }
 
+    const chosenName   = pickRandom(names);
+    const { city, region } = userLocRef.current;
+    const price        = getRandomPrice(city, region);
+    const phraseFunc   = pickRandom(TOAST_PHRASES);
+    const text         = phraseFunc(chosenName, chosenLocation, price);
+
     setLocation(chosenLocation);
-    setName(pickRandom(names));
+    setName(chosenName);
+    setToastText(text);
     setVisible(true);
     setTimeout(() => setVisible(false), 5000);
   }, [names]);
@@ -259,7 +298,7 @@ export default function SocialProofToast({ lang, currentAddress }: SocialProofTo
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto z-40 transition-all duration-500 mx-auto sm:mx-0 max-w-[calc(100%-2rem)] sm:max-w-[280px] ${
+      className={`fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto z-40 transition-all duration-500 mx-auto sm:mx-0 max-w-[calc(100%-2rem)] sm:max-w-[320px] ${
         visible
           ? "opacity-100 translate-y-0 pointer-events-auto"
           : "opacity-0 translate-y-3 pointer-events-none"
@@ -268,10 +307,7 @@ export default function SocialProofToast({ lang, currentAddress }: SocialProofTo
       <div className="flex items-center justify-between gap-3 bg-slate-800/95 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-3 shadow-2xl w-full">
         <span className="text-xl flex-shrink-0" aria-hidden="true">🏠</span>
         <p className="text-slate-300 text-sm leading-snug">
-          <span className="text-white font-semibold">
-            {name} {connector} {location}
-          </span>{" "}
-          {t.suffix}
+          {toastText || `${name} de ${location} ${t.suffix}`}
         </p>
         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
       </div>

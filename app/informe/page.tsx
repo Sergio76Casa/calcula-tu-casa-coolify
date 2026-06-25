@@ -45,29 +45,52 @@ function InformeLoader() {
 
         const val = vals.items[0];
 
+        // Parsear campos JSON guardados en PocketBase
+        let entorno = null;
+        let analisisBarrio = null;
+        let puntosFuertes: string[] = [];
+        let puntosAMejorar: string[] = [];
+
+        try { entorno = prop.entorno_json ? JSON.parse(prop.entorno_json) : null; } catch {}
+        try { analisisBarrio = val.analisis_barrio_json ? JSON.parse(val.analisis_barrio_json) : null; } catch {}
+        try { puntosFuertes = val.puntos_fuertes ? JSON.parse(val.puntos_fuertes) : []; } catch {}
+        try { puntosAMejorar = val.puntos_a_mejorar ? JSON.parse(val.puntos_a_mejorar) : []; } catch {}
+
         const resultObj = {
-          valoracion_id: val.id,
-          propiedad_id: lead.propiedad_id,
-          precio_sugerido: val.precio_sugerido,
-          rango_precios: { minimo: val.rango_minimo, maximo: val.rango_maximo },
-          argumentario_venta: val.argumentario_venta,
+          valoracion_id:              val.id,
+          propiedad_id:               lead.propiedad_id,
+          precio_sugerido:            val.precio_sugerido,
+          rango_precios:              { minimo: val.rango_minimo, maximo: val.rango_maximo },
+          argumentario_venta:         val.argumentario_venta,
+          precio_por_m2_zona:         val.precio_por_m2_zona ?? undefined,
+          ajuste_aplicado_pct:        val.ajuste_aplicado_pct ?? undefined,
+          puntos_fuertes:             puntosFuertes,
+          puntos_a_mejorar:           puntosAMejorar,
+          recomendacion_precio_salida: val.recomendacion_precio_salida ?? undefined,
+          precio_alquiler_estimado:   val.precio_alquiler_estimado ?? undefined,
+          rentabilidad_bruta_pct:     val.rentabilidad_bruta_pct ?? undefined,
+          tiempo_venta_estimado_dias: val.tiempo_venta_estimado_dias ?? undefined,
+          tendencia_mercado_12m:      val.tendencia_mercado_12m ?? undefined,
+          score_inversion:            val.score_inversion ?? undefined,
+          entorno,
+          analisis_barrio:            analisisBarrio,
         };
 
         const detailsObj = {
-          m2: prop.m2_construidos,
-          estado: prop.estado_conservacion,
-          tipo: prop.tipo_propiedad || "piso",
-          habitaciones: prop.habitaciones || 3,
-          ascensor: prop.ascensor,
-          jardin: prop.jardin,
+          m2:               prop.m2_construidos,
+          estado:           prop.estado_conservacion,
+          tipo:             prop.tipo_propiedad || "piso",
+          habitaciones:     prop.habitaciones || 3,
+          ascensor:         prop.ascensor,
+          jardin:           prop.jardin,
           energyCertificate: prop.certificado_energetico,
         };
 
         const addressStr = prop.direccion_completa;
-        const langCode = lead.lang || "es";
+        const langCode   = lead.lang || "es";
         const clientName = lead.nombre;
 
-        const reportData = { resultObj, detailsObj, addressStr, langCode, clientName };
+        const reportData = { resultObj, detailsObj, addressStr, langCode, clientName, entorno, analisisBarrio };
         setData(reportData);
         setLoading(false);
 
@@ -82,15 +105,17 @@ function InformeLoader() {
           console.error("Error al registrar descarga en BD:", patchErr);
         }
 
-        // 4. Generar y descargar el PDF automáticamente
-        await generatePDF(resultObj, detailsObj, addressStr, langCode, clientName);
+        // 4. Generar y descargar el PDF automáticamente con todos los datos
+        await generatePDF(resultObj, detailsObj, addressStr, langCode, clientName, entorno, analisisBarrio);
         setDownloaded(true);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Ocurrió un error al procesar el informe.";
         console.error("Error al cargar informe:", err);
-        setError(err.message || "Ocurrió un error al procesar el informe.");
+        setError(msg);
         setLoading(false);
       }
     }
+
 
     loadLeadAndDownload();
   }, [leadId]);
@@ -103,7 +128,9 @@ function InformeLoader() {
         data.detailsObj,
         data.addressStr,
         data.langCode,
-        data.clientName
+        data.clientName,
+        data.entorno ?? null,
+        data.analisisBarrio ?? null,
       );
       setDownloaded(true);
     } catch (err) {

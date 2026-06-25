@@ -64,7 +64,7 @@ const TITLES = ["¿Cuándo quieres vender?", "Estado de la vivienda", "Confirma 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function SellModal({ leadId, telefono_inicial, onClose }: Props) {
-  const [step,     setStep]     = useState<1 | 2 | 3>(1);
+  const [step,     setStep]     = useState<0 | 1 | 2 | 3>(0);
   const [urgencia, setUrgencia] = useState("");
   const [estado,   setEstado]   = useState("");
   const [telefono, setTelefono] = useState(telefono_inicial || "");
@@ -124,7 +124,7 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-base font-bold text-white">
-            {done ? "¡Todo listo!" : TITLES[step - 1]}
+            {done ? "¡Todo listo!" : step === 0 ? "Vende con expertos" : TITLES[step - 1]}
           </h2>
           <button onClick={onClose} aria-label="Cerrar"
             className="text-slate-500 hover:text-white text-xl leading-none transition-colors">✕</button>
@@ -145,7 +145,32 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
           </div>
         ) : (
           <>
-            <StepDots step={step} />
+            {/* ── Step 0: Gancho ──────────────────────────────────────────────── */}
+            {step === 0 && (
+              <div className="space-y-4 text-center">
+                <div className="w-12 h-12 bg-emerald-400/10 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-2xl">🎯</span>
+                </div>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  Nuestros agentes especializados en tu zona pueden ayudarte a{" "}
+                  <strong className="text-white">vender al mejor precio posible</strong>, sin complicaciones.
+                </p>
+                <div className="space-y-2 text-left">
+                  {['Valoración física gratuita', 'Acceso a compradores cualificados', 'Gestión completa de la venta'].map(b => (
+                    <div key={b} className="flex items-center gap-2 text-sm text-slate-300">
+                      <span className="text-emerald-400">✓</span> {b}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setStep(1)} className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition-colors">
+                  Quiero vender mi propiedad →
+                </button>
+                <p className="text-xs text-slate-600">Sin compromiso · El contacto es gratuito</p>
+              </div>
+            )}
+
+            {/* Steps 1-3 with dots */}
+            {step >= 1 && <StepDots step={step} />}
 
             {/* ── Step 1 ─────────────────────────────────────────────────────── */}
             {step === 1 && (

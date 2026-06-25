@@ -25,6 +25,25 @@ export interface ValuationResult {
   precio_sugerido: number;
   rango_precios: { minimo: number; maximo: number };
   argumentario_venta: string;
+  // Nuevos campos Gemini (opcionales para compatibilidad retroactiva)
+  precio_por_m2_zona?: number;
+  ajuste_aplicado_pct?: number;
+  puntos_fuertes?: string[];
+  puntos_a_mejorar?: string[];
+  recomendacion_precio_salida?: string;
+  precio_alquiler_estimado?: number;
+  rentabilidad_bruta_pct?: number;
+  tiempo_venta_estimado_dias?: number;
+  tendencia_mercado_12m?: number;
+  // Entorno y análisis de barrio
+  entorno?: Record<string, { nombre: string; distancia_m: number }[]> | null;
+  analisis_barrio?: {
+    tipo_barrio: string;
+    puntuacion_servicios: number;
+    descripcion: string;
+    ventajas_ubicacion: string[];
+  } | null;
+  score_inversion?: number;
 }
 
 interface LoadingValuationStepProps {
@@ -166,10 +185,12 @@ export default function LoadingValuationStep({
         <h2 className="text-2xl font-extrabold text-white mb-2">{tl.title}</h2>
         <p className="text-slate-400 text-sm mb-8 truncate px-4">{input.address}</p>
 
-        {/* Mensaje rotativo */}
-        <div className="h-6 mb-6">
+        {/* Mensaje rotativo con contexto dinámico */}
+        <div className="h-12 mb-6">
           <p key={msgIndex} className="text-blue-300 text-sm font-medium animate-pulse">
-            {tl.messages[msgIndex]}
+            {typeof tl.messages[msgIndex] === "function" 
+              ? (tl.messages[msgIndex] as any)(input.address) 
+              : tl.messages[msgIndex]}
           </p>
         </div>
 
