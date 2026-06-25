@@ -491,28 +491,26 @@ export async function POST(req: Request) {
       let coordLon: number | null = null;
 
       // Nominatim geocoding
-      if (!/\b\d{5}\b/.test(propiedad.direccion_completa)) {
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(propiedad.direccion_completa)}&format=json&limit=1&addressdetails=1&countrycodes=es`;
-          const geoRes = await fetch(url, {
-            headers: { "User-Agent": "CalculaTuCasa/1.0" },
-            signal: AbortSignal.timeout(1800),
-          });
-          if (geoRes.ok) {
-            const data = await geoRes.json();
-            if (data && data[0]) {
-              if (data[0].display_name) {
-                enrichedAddress = data[0].display_name;
-              }
-              if (data[0].lat && data[0].lon) {
-                coordLat = parseFloat(data[0].lat);
-                coordLon = parseFloat(data[0].lon);
-              }
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(propiedad.direccion_completa)}&format=json&limit=1&addressdetails=1&countrycodes=es`;
+        const geoRes = await fetch(url, {
+          headers: { "User-Agent": "CalculaTuCasa/1.0" },
+          signal: AbortSignal.timeout(1800),
+        });
+        if (geoRes.ok) {
+          const data = await geoRes.json();
+          if (data && data[0]) {
+            if (data[0].display_name) {
+              enrichedAddress = data[0].display_name;
+            }
+            if (data[0].lat && data[0].lon) {
+              coordLat = parseFloat(data[0].lat);
+              coordLon = parseFloat(data[0].lon);
             }
           }
-        } catch (err) {
-          console.error("[Geocoding error]", err);
         }
+      } catch (err) {
+        console.error("[Geocoding error]", err);
       }
 
       // Fetch entorno si tenemos coordenadas
