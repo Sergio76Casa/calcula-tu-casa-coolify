@@ -198,7 +198,7 @@ async function callGemini(
       generationConfig: {
         temperature: 0.2,
         responseMimeType: "application/json",
-        maxOutputTokens: 2500,
+        maxOutputTokens: 8000,
         responseSchema: {
           type: "OBJECT",
           properties: {
@@ -342,7 +342,7 @@ Responde SOLO con JSON:
         generationConfig: {
           temperature: 0.3,
           responseMimeType: "application/json",
-          maxOutputTokens: 500,
+          maxOutputTokens: 4000,
           responseSchema: {
             type: "OBJECT",
             properties: {
