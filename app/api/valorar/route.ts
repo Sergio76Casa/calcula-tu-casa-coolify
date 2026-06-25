@@ -467,9 +467,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY_VERTEX || process.env.GEMINI_API_KEY;
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY_VERTEX!;
     if (!GEMINI_API_KEY) {
-      throw new Error("Variables de entorno no configuradas en el proyecto (Falta GEMINI_API_KEY_VERTEX)");
+      throw new Error("Variable de entorno GEMINI_API_KEY_VERTEX no configurada en el servidor");
     }
 
     // ── Geocodificación + entorno en paralelo ────────────────────────────────
