@@ -848,6 +848,7 @@ export async function POST(req: Request) {
         const fallbackEntorno = await callGeminiEntornoFallback(propiedad.direccion_completa, GEMINI_API_KEY);
         if (fallbackEntorno) {
           entorno = fallbackEntorno;
+          entorno.origen = "gemini_fallback";
           console.log("[Entorno] Fallback de entorno con Gemini cargado con éxito.");
         }
       }

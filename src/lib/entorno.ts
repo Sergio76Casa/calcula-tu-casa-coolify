@@ -13,9 +13,14 @@ export interface EntornoData {
   restaurantes: POI[];
   gasolineras: POI[];
   salud: POI[];
+  origen?: "overpass" | "gemini_fallback";
 }
 
-const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+const OVERPASS_SERVERS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.openstreetmap.fr/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter"
+];
 
 function haversineMetros(
   lat1: number,
@@ -112,65 +117,76 @@ export async function fetchEntorno(
     salud: [],
   };
 
-  try {
-    const query = buildOverpassQuery(lat, lon);
-    const res = await fetch(OVERPASS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(8000),
-    });
+  const query = buildOverpassQuery(lat, lon);
 
-    if (!res.ok) return empty;
+  for (const url of OVERPASS_SERVERS) {
+    try {
+      console.log(`[Entorno] Intentando consultar Overpass en: ${url}`);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: AbortSignal.timeout(6000),
+      });
 
-    const json = await res.json();
-    const elements: OverpassElement[] = json.elements ?? [];
-
-    const colegios: POI[] = [];
-    const supermercados: POI[] = [];
-    const farmacias: POI[] = [];
-    const transporte: POI[] = [];
-    const parques: POI[] = [];
-    const restaurantes: POI[] = [];
-    const gasolineras: POI[] = [];
-    const salud: POI[] = [];
-
-    for (const el of elements) {
-      if (typeof el.lat !== "number" || typeof el.lon !== "number") continue;
-      const tags = el.tags ?? {};
-      const poi = elementToPOI(el, lat, lon);
-
-      if (tags.amenity === "school" || tags.amenity === "kindergarten") {
-        colegios.push(poi);
-      } else if (tags.shop === "supermarket" || tags.shop === "convenience") {
-        supermercados.push(poi);
-      } else if (tags.amenity === "pharmacy") {
-        farmacias.push(poi);
-      } else if (tags.railway === "station" || tags.highway === "bus_stop") {
-        transporte.push(poi);
-      } else if (tags.leisure === "park") {
-        parques.push(poi);
-      } else if (tags.amenity === "restaurant" || tags.amenity === "cafe") {
-        restaurantes.push(poi);
-      } else if (tags.amenity === "fuel") {
-        gasolineras.push(poi);
-      } else if (tags.amenity === "hospital" || tags.amenity === "clinic") {
-        salud.push(poi);
+      if (!res.ok) {
+        console.warn(`[Entorno] Servidor ${url} devolvió status ${res.status}. Probando siguiente espejo...`);
+        continue;
       }
-    }
 
-    return {
-      colegios: topN(colegios, 4),
-      supermercados: topN(supermercados, 4),
-      farmacias: topN(farmacias, 3),
-      transporte: topN(transporte, 5),
-      parques: topN(parques, 3),
-      restaurantes: topN(restaurantes, 4),
-      gasolineras: topN(gasolineras, 3),
-      salud: topN(salud, 3),
-    };
-  } catch (err) {
-    console.error("[api/entorno] Overpass error:", err);
-    return empty;
+      const json = await res.json();
+      const elements: OverpassElement[] = json.elements ?? [];
+
+      const colegios: POI[] = [];
+      const supermercados: POI[] = [];
+      const farmacias: POI[] = [];
+      const transporte: POI[] = [];
+      const parques: POI[] = [];
+      const restaurantes: POI[] = [];
+      const gasolineras: POI[] = [];
+      const salud: POI[] = [];
+
+      for (const el of elements) {
+        if (typeof el.lat !== "number" || typeof el.lon !== "number") continue;
+        const tags = el.tags ?? {};
+        const poi = elementToPOI(el, lat, lon);
+
+        if (tags.amenity === "school" || tags.amenity === "kindergarten") {
+          colegios.push(poi);
+        } else if (tags.shop === "supermarket" || tags.shop === "convenience") {
+          supermercados.push(poi);
+        } else if (tags.amenity === "pharmacy") {
+          farmacias.push(poi);
+        } else if (tags.railway === "station" || tags.highway === "bus_stop") {
+          transporte.push(poi);
+        } else if (tags.leisure === "park") {
+          parques.push(poi);
+        } else if (tags.amenity === "restaurant" || tags.amenity === "cafe") {
+          restaurantes.push(poi);
+        } else if (tags.amenity === "fuel") {
+          gasolineras.push(poi);
+        } else if (tags.amenity === "hospital" || tags.amenity === "clinic") {
+          salud.push(poi);
+        }
+      }
+
+      console.log(`[Entorno] Consulta exitosa en Overpass: ${url}. Encontrados ${elements.length} elementos.`);
+
+      return {
+        colegios: topN(colegios, 4),
+        supermercados: topN(supermercados, 4),
+        farmacias: topN(farmacias, 3),
+        transporte: topN(transporte, 5),
+        parques: topN(parques, 3),
+        restaurantes: topN(restaurantes, 4),
+        gasolineras: topN(gasolineras, 3),
+        salud: topN(salud, 3),
+        origen: "overpass"
+      };
+    } catch (err) {
+      console.warn(`[Entorno] Error en servidor Overpass ${url}:`, err);
+    }
   }
+
+  return empty;
 }

@@ -287,7 +287,14 @@ export default function ValuationDashboard({
         {/* Sección Tu Barrio */}
         {(entorno || analisisB) && (
           <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">📍 Tu barrio en detalle</p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">📍 Tu barrio en detalle</p>
+              {(entorno as any)?.origen && (
+                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400">
+                  {(entorno as any).origen === "overpass" ? "🛰️ Datos reales OSM" : "🤖 Simulación Gemini IA"}
+                </span>
+              )}
+            </div>
 
             {/* Puntuación de servicios */}
             {analisisB && (
