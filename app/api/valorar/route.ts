@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { pbCreate } from "@/lib/pocketbase";
-import { fetchEntorno, EntornoData, POI } from "../entorno/route";
+import { fetchEntorno, EntornoData, POI } from "@/lib/entorno";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
 
