@@ -44,6 +44,7 @@ export interface ValuationResult {
     ventajas_ubicacion: string[];
   } | null;
   score_inversion?: number;
+  coordenadas?: { lat: number; lon: number } | null;
 }
 
 interface LoadingValuationStepProps {
