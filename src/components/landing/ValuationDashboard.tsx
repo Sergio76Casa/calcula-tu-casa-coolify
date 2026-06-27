@@ -4,8 +4,8 @@ import { useState } from "react";
 import type { ValuationResult } from "./LoadingValuationStep";
 import type { PropertyDetails } from "./PropertyDetailsStep";
 import EnergyScale from "@/components/EnergyScale";
+import { T, type Lang } from "@/lib/translations";
 import { U } from "@/lib/uiStrings";
-import type { Lang } from "@/lib/translations";
 import SellModal from "./SellModal";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import PriceBanner from "@/components/dashboard/PriceBanner";
@@ -80,6 +80,8 @@ const G_STYLE = {
   },
 } as const;
 
+// ─── Bloque análisis Gemini Component ─────────────────────────────────────────
+
 function GeminiBlock({
   icon,
   title,
@@ -134,6 +136,7 @@ export default function ValuationDashboard({
   const { argumentario_venta } = result;
   const { strengths, concerns, energy } = classifyGemini(argumentario_venta);
   const tp = U(lang).pdf;
+  const t = T(lang).dashboard;
 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
@@ -174,21 +177,21 @@ export default function ValuationDashboard({
       <section className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 px-4 py-12">
         <div className="max-w-2xl mx-auto space-y-5">
           {/* Encabezado */}
-          <DashboardHeader address={address} />
+          <DashboardHeader address={address} lang={lang} />
 
           {/* Precio + rango + métricas */}
-          <PriceBanner result={result} m2={details.m2} />
+          <PriceBanner result={result} m2={details.m2} lang={lang} />
 
           {/* Puntos fuertes / a considerar (análisis estático) */}
-          <HighlightsGrid details={details} />
+          <HighlightsGrid details={details} lang={lang} />
 
           {/* Sección Tu Barrio */}
-          <NeighbourhoodDetail entorno={entorno as any} analisisBarrio={analisisB} />
+          <NeighbourhoodDetail entorno={entorno as any} analisisBarrio={analisisB} lang={lang} />
 
           {/* Certificado Energético */}
           <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
-              ⚡ Certificado Energético
+              ⚡ {T(lang).form.energyLabel}
             </p>
             <EnergyScale cert={details.energyCertificate} />
           </div>
@@ -196,19 +199,19 @@ export default function ValuationDashboard({
           {/* Análisis Gemini — 3 bloques temáticos */}
           <GeminiBlock
             icon="✅"
-            title="Puntos Fuertes · Gemini IA"
+            title={t.geminiBlock.strengths}
             items={strengths}
             theme="emerald"
           />
           <GeminiBlock
             icon="⚠️"
-            title="Puntos a Considerar · Gemini IA"
+            title={t.geminiBlock.concerns}
             items={concerns}
             theme="amber"
           />
           <GeminiBlock
             icon="🌱"
-            title="Análisis Energético · Gemini IA"
+            title={t.geminiBlock.energy}
             items={energy}
             theme="blue"
           />
@@ -221,13 +224,13 @@ export default function ValuationDashboard({
             className="w-full py-4 border-2 border-slate-500/50 hover:border-slate-400 text-slate-300 hover:text-white font-bold text-base rounded-2xl transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <span aria-hidden="true">{pdfLoading ? "⏳" : "📄"}</span>
-            {pdfLoading ? "Generando PDF..." : tp.btn}
+            {pdfLoading ? t.generatingPdf : tp.btn}
           </button>
 
           {/* CTA principal — WhatsApp */}
           <a
             href={`https://wa.me/34602499146?text=${encodeURIComponent(
-              `Hola, acabo de valorar mi propiedad en CalculaTuCasa.com y me gustaría solicitar una visita para una valoración física profesional. La dirección es: ${address}`
+              t.waText.replace("{address}", address)
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -236,7 +239,7 @@ export default function ValuationDashboard({
             <span className="text-xl sm:text-2xl" aria-hidden="true">
               🗓
             </span>
-            Solicitar visita de confirmación con un experto
+            {t.waButton}
           </a>
 
           {/* CTA secundario — modal venta */}
@@ -246,7 +249,7 @@ export default function ValuationDashboard({
             className="w-full py-4 border-2 border-emerald-500/50 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 font-bold text-base rounded-2xl transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
           >
             <span aria-hidden="true">💰</span>
-            Quiero vender por este precio
+            {t.sellButton}
           </button>
 
           {/* Reset */}
@@ -255,7 +258,7 @@ export default function ValuationDashboard({
               onClick={onReset}
               className="text-slate-600 hover:text-slate-400 text-xs underline underline-offset-4 transition-colors"
             >
-              Valorar otra propiedad
+              {t.resetButton}
             </button>
           </p>
         </div>
@@ -266,6 +269,7 @@ export default function ValuationDashboard({
           leadId={leadId ?? null}
           telefono_inicial={telefonoInicial ?? null}
           onClose={() => setShowSellModal(false)}
+          lang={lang}
         />
       )}
     </>

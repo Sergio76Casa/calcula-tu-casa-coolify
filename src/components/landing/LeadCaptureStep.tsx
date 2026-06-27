@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { T, type Lang, type Variant } from "@/lib/translations";
 import type { ValuationResult } from "./LoadingValuationStep";
+import { PriceTease, Field } from "./FormControls";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -38,81 +39,6 @@ const TESTIMONIOS = [
   { stars: 5, text: 'Increíble precisión. Me ahorró meses de negociación', name: 'Ana L.', city: 'Valencia' },
 ];
 
-// ─── Subcomponente: gancho visual con precio bloqueado ────────────────────────
-
-function PriceTease({ result, priceReady, locked }: { result: ValuationResult; priceReady: string; locked: string }) {
-  // Máscara de dígitos: reemplaza cada dígito por ●
-  const digitMask = result.precio_sugerido
-    .toLocaleString("es-ES")
-    .replace(/\d/g, "●");
-
-  return (
-    <div className="mb-6 p-5 bg-white/5 border border-white/10 rounded-2xl">
-      <div className="text-center mb-3">
-        <div className="inline-flex items-center gap-1.5 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          {priceReady}
-        </div>
-
-        {/* Precio borroso con overlay */}
-        <div className="relative inline-block mb-2">
-          <p className="text-4xl font-extrabold text-emerald-400 blur-md select-none" aria-hidden>
-            {result.precio_sugerido.toLocaleString("es-ES")} €
-          </p>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="bg-slate-900/90 backdrop-blur-sm border border-white/10 rounded-full px-3 py-1 text-white text-sm font-semibold">🔒 {locked}</span>
-          </div>
-        </div>
-
-        {/* Número de cifras */}
-        <p className="text-slate-400 text-sm">
-          Tu valoración: <span className="text-white font-mono font-bold tracking-widest">{digitMask} €</span>
-        </p>
-      </div>
-
-      {/* Rango visible SIN blur */}
-      <div className="flex justify-between items-center border-t border-white/10 pt-3 mt-3">
-        <div className="text-center">
-          <p className="text-xs text-slate-500">Mínimo</p>
-          <p className="text-slate-300 font-semibold text-sm">{result.rango_precios.minimo.toLocaleString("es-ES")} €</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-slate-500">Precio exacto</p>
-          <p className="text-white font-bold">🔒 Bloqueado</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-slate-500">Máximo</p>
-          <p className="text-slate-300 font-semibold text-sm">{result.rango_precios.maximo.toLocaleString("es-ES")} €</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Campo de formulario reutilizable ─────────────────────────────────────────
-
-function Field({
-  label, type = "text", value, placeholder, error, autoComplete, onChange,
-}: {
-  label: React.ReactNode; type?: string; value: string; placeholder: string;
-  error?: string; autoComplete?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-semibold text-slate-300 mb-1.5">{label}</label>
-      <input
-        type={type} value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder} autoComplete={autoComplete}
-        className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-slate-500 outline-none transition-colors ${
-          error ? "border-red-500/60" : "border-white/10 focus:border-blue-400"
-        }`}
-      />
-      {error && <p role="alert" className="mt-1.5 text-red-400 text-xs">{error}</p>}
-    </div>
-  );
-}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 

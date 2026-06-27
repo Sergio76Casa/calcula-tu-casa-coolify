@@ -116,6 +116,7 @@ function HomeInner({ variant }: { variant: Variant }) {
         <ExitIntentModal
           price={result.precio_sugerido}
           onStay={() => {/* ya está en step 4 */}}
+          lang={lang}
         />
       )}
       {step === 5 && result && details && (

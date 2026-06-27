@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { T, type Lang } from "@/lib/translations";
 
 interface Task {
   id: string;
@@ -9,14 +10,18 @@ interface Task {
 
 interface Day {
   day: number;
-  title: string;
+  title: Record<Lang, string>;
   tasks: Task[];
 }
 
 const ROADMAP_DAYS: Day[] = [
   {
     day: 1,
-    title: "Configuración de Entornos y Cuentas",
+    title: {
+      es: "Configuración de Entornos y Cuentas",
+      ca: "Configuració d'Entorns i Comptes",
+      en: "Environment and Accounts Setup",
+    },
     tasks: [
       { id: "d1-t1", text: "Configurar el entorno paralelo de Staging (Local o subdominio en Coolify) para pruebas seguras." },
       { id: "d1-t2", text: "Crear una cuenta en ManyChat y vincularla a la cuenta profesional de Instagram." },
@@ -25,7 +30,11 @@ const ROADMAP_DAYS: Day[] = [
   },
   {
     day: 2,
-    title: "Creación del Roadmap y Enlace en Admin",
+    title: {
+      es: "Creación del Roadmap y Enlace en Admin",
+      ca: "Creació del Roadmap i Enllaç a l'Admin",
+      en: "Roadmap Creation and Admin Link",
+    },
     tasks: [
       { id: "d2-t1", text: "Diseñar e implementar la ruta /roadmap privada con el simulador de ROI y guiones de texto." },
       { id: "d2-t2", text: "Añadir botón de acceso seguro al Roadmap y el CRUD de inmobiliarias en el panel de /admin." }
@@ -33,7 +42,11 @@ const ROADMAP_DAYS: Day[] = [
   },
   {
     day: 3,
-    title: "Integración de Meta Pixel y API Endpoint",
+    title: {
+      es: "Integración de Meta Pixel y API Endpoint",
+      ca: "Integració de Meta Pixel i Endpoint API",
+      en: "Meta Pixel and API Endpoint Integration",
+    },
     tasks: [
       { id: "d3-t1", text: "Insertar el código de Meta Pixel en layout.tsx para registrar visitas a la web de forma automática." },
       { id: "d3-t2", text: "Habilitar la integración en HomeClient.tsx para que lance el evento 'LeadCapturado' al finalizar el paso 4." },
@@ -42,7 +55,11 @@ const ROADMAP_DAYS: Day[] = [
   },
   {
     day: 4,
-    title: "Mapeo de Códigos Postales e Inmobiliarias",
+    title: {
+      es: "Mapeo de Códigos Postales e Inmobiliarias",
+      ca: "Mapeig de Codis Postals i Immobiliàries",
+      en: "Postal Codes and Real Estate Mapping",
+    },
     tasks: [
       { id: "d4-t1", text: "Comprobar las tablas relacionales de 'inmobiliarias' y 'zonas_inmobiliarias' en PocketBase." },
       { id: "d4-t2", text: "Implementar en el panel de admin las pestañas CRUD para asociar códigos postales con agencias." },
@@ -51,7 +68,11 @@ const ROADMAP_DAYS: Day[] = [
   },
   {
     day: 5,
-    title: "Automatización de ManyChat (Instagram / WA)",
+    title: {
+      es: "Automatización de ManyChat (Instagram / WA)",
+      ca: "Automatització de ManyChat (Instagram / WA)",
+      en: "ManyChat Automation (Instagram / WA)",
+    },
     tasks: [
       { id: "d5-t1", text: "Configurar en ManyChat el flujo de preguntas (Calle, m2, estado) y vincular la llamada API externa." },
       { id: "d5-t2", text: "Testear desde un móvil que ManyChat devuelva la tasación real de Gemini y registre el lead en PocketBase." }
@@ -59,7 +80,11 @@ const ROADMAP_DAYS: Day[] = [
   },
   {
     day: 6,
-    title: "Creación de Creativos y Lanzamiento",
+    title: {
+      es: "Creación de Creativos y Lanzamiento",
+      ca: "Creació de Creatius i Llançament",
+      en: "Creative Assets and Launch",
+    },
     tasks: [
       { id: "d6-t1", text: "Editar 2 Reels dinámicos en CapCut usando ganchos locales, capturas del móvil y voz de ElevenLabs." },
       { id: "d6-t2", text: "Lanzar en Meta Ads una campaña dual: Campaña A (a Web con Pixel) y Campaña B (a Chat con ManyChat)." }
@@ -67,7 +92,11 @@ const ROADMAP_DAYS: Day[] = [
   },
   {
     day: 7,
-    title: "Despliegue a Producción y Cierre B2B",
+    title: {
+      es: "Despliegue a Producción y Cierre B2B",
+      ca: "Desplegament a Producció i Tancament B2B",
+      en: "Production Deployment and B2B Close",
+    },
     tasks: [
       { id: "d7-t1", text: "Subir a producción (Coolify) todas las modificaciones verificadas en el entorno Staging." },
       { id: "d7-t2", text: "Revisar los primeros leads de prueba, y proponer los leads calificados a las agencias inmobiliarias." }
@@ -75,7 +104,7 @@ const ROADMAP_DAYS: Day[] = [
   }
 ];
 
-export default function ProgressTracker() {
+export default function ProgressTracker({ lang = "es" }: { lang?: Lang }) {
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({});
   const [activeDay, setActiveDay] = useState<number>(1);
 
@@ -104,22 +133,26 @@ export default function ProgressTracker() {
   const completedTasks = Object.values(checkedTasks).filter(Boolean).length;
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+  const t = T(lang).roadmap;
+
   return (
     <div className="bg-slate-800/80 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-            🚀 Plan de Acción Diario (Roadmap de 7 Días)
+            {t.progressTitle}
           </h2>
           <p className="text-slate-400 text-xs mt-1">
-            Marca las casillas conforme completes cada fase para monitorizar tu avance hacia el sistema 100% automático.
+            {t.progressDesc}
           </p>
         </div>
         {/* Progreso Circular o Barra */}
         <div className="flex items-center gap-3 bg-slate-900/60 border border-white/5 rounded-xl px-4 py-2 flex-shrink-0 w-full sm:w-auto">
           <div className="text-left">
-            <p className="text-[9px] uppercase tracking-wider text-slate-500">Progreso Total</p>
-            <p className="text-lg font-black text-emerald-400">{progressPct}% completado</p>
+            <p className="text-[9px] uppercase tracking-wider text-slate-500">{t.progressTotal}</p>
+            <p className="text-lg font-black text-emerald-400">
+              {t.progressCompleted.replace("{pct}", String(progressPct))}
+            </p>
           </div>
           <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-400" style={{ width: `${progressPct}%` }} />
@@ -144,7 +177,7 @@ export default function ProgressTracker() {
                   : "bg-slate-900/40 text-slate-400 border border-white/5 hover:border-white/10"
               }`}
             >
-              <span>Día {d.day}</span>
+              <span>{t.dayText.replace("{day}", String(d.day))}</span>
               {dayCompleted ? (
                 <span className="text-emerald-400">✓</span>
               ) : dayStarted ? (
@@ -160,7 +193,9 @@ export default function ProgressTracker() {
         <div key={d.day} className="space-y-4 animate-fadeIn">
           <div>
             <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-              📅 Día {d.day}: {d.title}
+              {t.activeDayTitle
+                .replace("{day}", String(d.day))
+                .replace("{title}", d.title[lang])}
             </h3>
           </div>
 

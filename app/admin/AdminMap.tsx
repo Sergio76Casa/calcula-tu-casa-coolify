@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { T, type Lang } from "@/lib/translations";
 
 interface AdminMapProps {
   pins: { address: string }[];
+  lang?: Lang;
 }
 
 const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -29,7 +31,7 @@ async function geocode(address: string): Promise<{ lat: number; lng: number } | 
 
 function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }
 
-export default function AdminMap({ pins }: AdminMapProps) {
+export default function AdminMap({ pins, lang = "es" }: AdminMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef       = useRef<unknown>(null);
 
@@ -41,7 +43,6 @@ export default function AdminMap({ pins }: AdminMapProps) {
     import("leaflet").then(async (L) => {
       if (cancelled || !container) return;
 
-      // Fix marker icon paths (webpack asset resolution issue)
       const IconDefault = L.Icon.Default as unknown as { prototype: { _getIconUrl?: unknown } };
       delete IconDefault.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -56,10 +57,11 @@ export default function AdminMap({ pins }: AdminMapProps) {
       map.setView([40.416775, -3.703790], 6); // Spain
       mapRef.current = map;
 
-      // Count leads per unique address
       const counts: Record<string, number> = {};
       pins.forEach((p) => { counts[p.address] = (counts[p.address] ?? 0) + 1; });
       const unique = Object.keys(counts);
+
+      const t = T(lang).admin.map;
 
       for (const address of unique) {
         if (cancelled) break;
@@ -68,14 +70,16 @@ export default function AdminMap({ pins }: AdminMapProps) {
         if (!coords) { await sleep(1200); continue; }
 
         const n = counts[address];
+        const textPlural = n > 1 ? t.valuations : t.valuation;
+
         L.marker([coords.lat, coords.lng])
           .addTo(map)
           .bindPopup(
-            `<div style="font-size:12px"><b>${address}</b><br/>${n} valoración${n > 1 ? "es" : ""}</div>`,
+            `<div style="font-size:12px"><b>${address}</b><br/>${n} ${textPlural}</div>`,
             { maxWidth: 240 }
           );
 
-        await sleep(1200); // respect Nominatim 1 req/s limit
+        await sleep(1200);
       }
     });
 
@@ -88,7 +92,7 @@ export default function AdminMap({ pins }: AdminMapProps) {
       if (container) container.innerHTML = "";
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pins.length]);
+  }, [pins.length, lang]);
 
   return (
     <div

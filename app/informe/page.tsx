@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { pbClient } from "@/lib/pocketbase-client";
 import { generatePDF } from "@/lib/generatePDF";
+import { T, type Lang } from "@/lib/translations";
 
 function InformeLoader() {
   const searchParams = useSearchParams();
@@ -12,6 +13,7 @@ function InformeLoader() {
   const [error, setError] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState(false);
   const [data, setData] = useState<any>(null);
+  const [lang, setLang] = useState<Lang>("es");
 
   useEffect(() => {
     if (!leadId) {
@@ -87,8 +89,10 @@ function InformeLoader() {
         };
 
         const addressStr = prop.direccion_completa;
-        const langCode   = lead.lang || "es";
+        const langCode   = (lead.lang as Lang) || "es";
         const clientName = lead.nombre;
+
+        setLang(langCode);
 
         const reportData = { resultObj, detailsObj, addressStr, langCode, clientName, entorno, analisisBarrio };
         setData(reportData);
@@ -116,7 +120,6 @@ function InformeLoader() {
       }
     }
 
-
     loadLeadAndDownload();
   }, [leadId]);
 
@@ -138,29 +141,41 @@ function InformeLoader() {
     }
   }
 
+  const t = T(lang).informe;
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-6 text-center">
         <div className="w-12 h-12 border-4 border-slate-700 border-t-emerald-400 rounded-full animate-spin mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">Generando tu informe de tasación...</h2>
+        <h2 className="text-xl font-bold text-white mb-2">{t.loader.generating}</h2>
         <p className="text-slate-400 text-sm max-w-sm">
-          Estamos recopilando los datos de tu vivienda y preparando el documento PDF personalizado.
+          {t.loader.preparing}
         </p>
       </div>
     );
   }
 
   if (error) {
+    // Map backend error messages to translations if possible
+    let errorText = error;
+    if (error === "No se ha proporcionado ningún identificador de informe.") {
+      errorText = t.error.noId;
+    } else if (error === "No se encontró el informe solicitado.") {
+      errorText = t.error.notFound;
+    } else if (error === "No se encontró la valoración de la propiedad.") {
+      errorText = t.error.noValuation;
+    }
+
     return (
       <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center max-w-md">
         <span className="text-4xl mb-4 block">⚠️</span>
-        <h2 className="text-lg font-bold text-red-400 mb-2">Error al descargar</h2>
-        <p className="text-slate-400 text-sm mb-6">{error}</p>
+        <h2 className="text-lg font-bold text-red-400 mb-2">{t.error.title}</h2>
+        <p className="text-slate-400 text-sm mb-6">{errorText}</p>
         <a
           href="/"
           className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors inline-block"
         >
-          Volver a la web principal
+          {t.error.back}
         </a>
       </div>
     );
@@ -171,33 +186,36 @@ function InformeLoader() {
       <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
         ✨
       </div>
-      <h2 className="text-2xl font-black text-white tracking-tight mb-2">¡Tu informe está listo!</h2>
+      <h2 className="text-2xl font-black text-white tracking-tight mb-2">{t.ready.title}</h2>
       <p className="text-slate-400 text-sm mb-6">
-        Si la descarga no se ha iniciado automáticamente en tu dispositivo, haz clic en el botón de abajo para descargarlo manualmente.
+        {t.ready.desc}
       </p>
       
       <button
         onClick={triggerManualDownload}
         className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 mb-4"
       >
-        <span>📄</span> {downloaded ? "Descargar de nuevo" : "Descargar informe PDF"}
+        <span>📄</span> {downloaded ? t.ready.downloadAgain : t.ready.downloadBtn}
       </button>
 
       <p className="text-xs text-slate-500">
-        CalculaTuCasa.com · Valoración Inteligente de Viviendas
+        {t.ready.footer}
       </p>
     </div>
   );
 }
 
 export default function InformePage() {
+  // Use Spanish as a default initial translation for page wrapper suspense, which is fine
+  const t = T("es").informe;
+
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <Suspense
         fallback={
           <div className="flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 border-4 border-slate-700 border-t-emerald-400 rounded-full animate-spin mb-4" />
-            <h2 className="text-xl font-bold text-white">Preparando descarga...</h2>
+            <h2 className="text-xl font-bold text-white">{t.preparingText}</h2>
           </div>
         }
       >

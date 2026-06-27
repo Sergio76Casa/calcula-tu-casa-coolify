@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { T, type Lang } from "@/lib/translations";
 
 type Focus = "ia" | "energy" | "direct";
 type Channel = "meta" | "reel" | "whatsapp";
@@ -59,7 +60,7 @@ const SCRIPTS: Record<Focus, Record<Channel, { title: string; content: string; d
   }
 };
 
-export default function CopyGenerator() {
+export default function CopyGenerator({ lang = "es" }: { lang?: Lang }) {
   const [focus, setFocus] = useState<Focus>("ia");
   const [channel, setChannel] = useState<Channel>("meta");
   const [copied, setCopied] = useState(false);
@@ -72,13 +73,15 @@ export default function CopyGenerator() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const t = T(lang).roadmap;
+
   return (
     <div className="bg-slate-800/80 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
       <h2 className="text-xl font-extrabold text-white mb-1.5 flex items-center gap-2">
-        ✍️ Generador de Textos y Guiones de Anuncios
+        {t.copyTitle}
       </h2>
       <p className="text-slate-400 text-xs mb-6">
-        Selecciona la temática y el canal de publicación. Copia el guion con un solo clic y úsalo en Canva, CapCut o redes sociales.
+        {t.copyDesc}
       </p>
 
       {/* Selectores de Temática */}
@@ -89,7 +92,7 @@ export default function CopyGenerator() {
             focus === "ia" ? "bg-blue-500 text-white" : "bg-slate-700/50 text-slate-400 hover:bg-slate-700"
           }`}
         >
-          🤖 Enfoque Inteligencia Artificial
+          🤖 {lang === "en" ? "AI Focus" : (lang === "ca" ? "Enfocament Intel·ligència Artificial" : "Enfoque Inteligencia Artificial")}
         </button>
         <button
           onClick={() => setFocus("energy")}
@@ -97,7 +100,7 @@ export default function CopyGenerator() {
             focus === "energy" ? "bg-blue-500 text-white" : "bg-slate-700/50 text-slate-400 hover:bg-slate-700"
           }`}
         >
-          ⚡ Enfoque Eficiencia Energética
+          ⚡ {lang === "en" ? "Energy Focus" : (lang === "ca" ? "Enfocament Eficiència Energètica" : "Enfoque Eficiencia Energética")}
         </button>
         <button
           onClick={() => setFocus("direct")}
@@ -105,7 +108,7 @@ export default function CopyGenerator() {
             focus === "direct" ? "bg-blue-500 text-white" : "bg-slate-700/50 text-slate-400 hover:bg-slate-700"
           }`}
         >
-          🎯 Enfoque Directo y Simple
+          🎯 {lang === "en" ? "Direct Focus" : (lang === "ca" ? "Enfocament Directe i Simple" : "Enfoque Directo y Simple")}
         </button>
       </div>
 
@@ -121,7 +124,7 @@ export default function CopyGenerator() {
                 : "border-white/5 bg-slate-900/40 text-slate-400 hover:border-white/10"
             }`}
           >
-            {c === "meta" ? "Meta Ads (Post)" : c === "reel" ? "Reel / Vídeo script" : "WhatsApp Chat"}
+            {c === "meta" ? "Meta Ads (Post)" : c === "reel" ? (lang === "en" ? "Reel Script" : "Reel / Vídeo script") : "WhatsApp Chat"}
           </button>
         ))}
       </div>
@@ -137,7 +140,7 @@ export default function CopyGenerator() {
             onClick={handleCopy}
             className="flex-shrink-0 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white text-xs font-medium rounded-lg border border-white/10 transition-colors flex items-center gap-1.5 active:scale-[0.98]"
           >
-            {copied ? "✅ ¡Copiado!" : "📋 Copiar Texto"}
+            {copied ? `✅ ${t.copyCopiedBtn}` : `📋 ${t.copyCopyBtn}`}
           </button>
         </div>
 

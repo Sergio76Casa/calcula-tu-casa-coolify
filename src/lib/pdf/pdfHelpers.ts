@@ -1,4 +1,6 @@
+import type { jsPDF } from "jspdf";
 import type { Lang } from "../translations";
+import { C, PDF_DIMENSIONS, LOGO_BASE64 } from "./pdfConfig";
 
 export function stripEmoji(s: string): string {
   return s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, "").trim();
@@ -43,4 +45,63 @@ export function cuotaMensual(
   const r = tasaAnual / 12;
   const n = anios * 12;
   return (capital * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
+// Headers y Footers Recurrentes
+export function drawHeader(
+  doc: jsPDF,
+  refId: string,
+  dateStr: string,
+  pageNum: number,
+  pageTotal: number
+) {
+  doc.setFillColor(...C.dark);
+  doc.rect(0, 0, PDF_DIMENSIONS.W, 22, "F");
+  const lw = 60;
+  const lh = 18;
+  doc.addImage(LOGO_BASE64, "JPEG", PDF_DIMENSIONS.ML, 2, lw, lh);
+  doc.setFontSize(7);
+  doc.setTextColor(...C.slate5);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `Ref. ${refId}`,
+    PDF_DIMENSIONS.W - PDF_DIMENSIONS.MR,
+    9,
+    { align: "right" }
+  );
+  doc.text(
+    dateStr,
+    PDF_DIMENSIONS.W - PDF_DIMENSIONS.MR,
+    15,
+    { align: "right" }
+  );
+  doc.setFontSize(7);
+  doc.setTextColor(...C.slate3);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `${pageNum} / ${pageTotal}`,
+    PDF_DIMENSIONS.W / 2,
+    19,
+    { align: "center" }
+  );
+}
+
+export function drawFooter(doc: jsPDF, footerText: string) {
+  doc.setDrawColor(...C.slate3);
+  doc.setLineWidth(0.2);
+  doc.line(
+    PDF_DIMENSIONS.ML,
+    PDF_DIMENSIONS.PAGE_MAX + 2,
+    PDF_DIMENSIONS.W - PDF_DIMENSIONS.MR,
+    PDF_DIMENSIONS.PAGE_MAX + 2
+  );
+  doc.setFontSize(7);
+  doc.setTextColor(...C.slate5);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    footerText,
+    PDF_DIMENSIONS.W / 2,
+    PDF_DIMENSIONS.PAGE_MAX + 8,
+    { align: "center" }
+  );
 }

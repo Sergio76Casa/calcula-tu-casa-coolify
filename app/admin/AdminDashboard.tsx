@@ -10,10 +10,9 @@ import LeadsTable,  { type LeadRow }  from "./LeadsTable";
 import BannersAdmin from "./BannersAdmin";
 import NamesAdmin from "./NamesAdmin";
 import AgenciesAdmin from "./AgenciesAdmin";
+import { T, type Lang } from "@/lib/translations";
 
 const AdminMap = dynamic(() => import("./AdminMap"), { ssr: false });
-
-// Helpers for Leads are handled directly in fetchLeads now
 
 function computeMetrics(leads: LeadRow[]): Metrics {
   const total    = leads.length;
@@ -35,8 +34,6 @@ function computeMetrics(leads: LeadRow[]): Metrics {
   };
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
-
 export default function AdminDashboard() {
   const [session,  setSession]  = useState<unknown>(null);
   const [checking, setChecking] = useState(true);
@@ -45,10 +42,24 @@ export default function AdminDashboard() {
   const [abMode,   setAbMode]   = useState("random");
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+  const [lang,     setLang]     = useState<Lang>("es");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("admin_lang") as Lang;
+    if (saved && ["es", "ca", "en"].includes(saved)) {
+      setLang(saved);
+    }
+  }, []);
+
+  const handleLangChange = (l: Lang) => {
+    setLang(l);
+    localStorage.setItem("admin_lang", l);
+  };
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const t = T(lang).admin.leads;
 
     try {
       const leadsData = await pbClient.collection("leads").getFullList({
@@ -59,7 +70,6 @@ export default function AdminDashboard() {
       const valMap = new Map();
       valData.forEach(v => valMap.set(v.propiedad_id, v));
 
-      // Obtener asignación de zonas e inmobiliarias
       const zonesData = await pbClient.collection("zonas_inmobiliarias").getFullList({
         expand: "inmobiliaria_id"
       });
@@ -75,7 +85,6 @@ export default function AdminDashboard() {
         const val = valMap.get(r.propiedad_id);
         const prop = r.expand?.propiedad_id;
         
-        // Extraer CP de la dirección completa
         const cpMatch = prop?.direccion_completa?.match(/\b\d{5}\b/);
         const cp = cpMatch ? cpMatch[0] : null;
         const assignedAgency = cp ? zonesMap.get(cp) : null;
@@ -112,14 +121,15 @@ export default function AdminDashboard() {
       setMetrics(computeMetrics(flat));
       setLoading(false);
     } catch (err: any) {
-      setError("Error cargando datos: " + err.message);
+      setError(t.errorLoading + err.message);
       setLoading(false);
     }
-  }, []);
+  }, [lang]);
 
   async function handleAbModeChange(newMode: string) {
+    const t = T(lang).admin.leads;
     setAbMode(newMode);
-    alert("El modo A/B está desactivado en la versión de PocketBase.");
+    alert(t.alertAb);
   }
 
   useEffect(() => {
@@ -127,12 +137,15 @@ export default function AdminDashboard() {
     setChecking(false);
     if (pbClient.authStore.isValid) fetchLeads();
     
-    // Auth state listener for PocketBase
-    pbClient.authStore.onChange((token, model) => {
+    const unsubscribe = pbClient.authStore.onChange((token, model) => {
       setSession(model);
       if (model) fetchLeads();
       else { setLeads([]); setMetrics(null); }
     });
+
+    return () => {
+      unsubscribe();
+    };
   }, [fetchLeads]);
 
   async function handleLogout() {
@@ -147,11 +160,13 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!session) return <LoginGate />;
+  if (!session) return <LoginGate lang={lang} />;
 
   const mapPins = leads
     .filter(l => l.direccion)
     .map(l => ({ address: l.direccion! }));
+
+  const t = T(lang).admin;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -159,19 +174,36 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-slate-950/90 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-black text-white tracking-tight">CalculaTuCasa Admin</h1>
-          <p className="text-slate-500 text-xs">Panel de control · Leads en tiempo real</p>
+          <h1 className="text-lg font-black text-white tracking-tight">{t.header.title}</h1>
+          <p className="text-slate-500 text-xs">{t.header.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Selector de idioma del Admin */}
+          <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 mr-2">
+            {(["es", "ca", "en"] as Lang[]).map((code) => (
+              <button
+                key={code}
+                onClick={() => handleLangChange(code)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  lang === code
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {code.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
           <Link
             href="/roadmap"
             className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-1.5"
           >
-            🧭 Ver Roadmap
+            {t.header.roadmap}
           </Link>
           <button onClick={handleLogout}
             className="px-4 py-2 text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/30 rounded-xl transition-colors">
-            Cerrar sesión
+            {t.header.logout}
           </button>
         </div>
       </header>
@@ -184,25 +216,28 @@ export default function AdminDashboard() {
             metrics={metrics} 
             abMode={abMode} 
             onModeChange={handleAbModeChange} 
+            lang={lang}
           />
         )}
 
         {/* Social Proof Banners */}
-        <BannersAdmin />
+        <BannersAdmin lang={lang} />
 
         {/* Social Proof Names */}
-        <NamesAdmin />
+        <NamesAdmin lang={lang} />
 
         {/* Agencies Administration */}
-        <AgenciesAdmin />
+        <AgenciesAdmin lang={lang} />
 
         {/* Map */}
         {mapPins.length > 0 && (
           <section>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-              🗺 Valoraciones por zona · {mapPins.length} dirección{mapPins.length !== 1 ? "es" : ""}
+              {t.map.title
+                .replace("{count}", String(mapPins.length))
+                .replace("{plural}", mapPins.length !== 1 ? (lang === "en" ? "es" : "es") : "")}
             </p>
-            <AdminMap pins={mapPins} />
+            <AdminMap pins={mapPins} lang={lang} />
           </section>
         )}
 
@@ -210,7 +245,7 @@ export default function AdminDashboard() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              📋 Leads registrados
+              {t.leads.title}
             </p>
             {loading && (
               <div className="w-4 h-4 border-2 border-slate-700 border-t-blue-400 rounded-full animate-spin" />
@@ -221,7 +256,7 @@ export default function AdminDashboard() {
               {error}
             </div>
           ) : (
-            <LeadsTable leads={leads} onRefresh={fetchLeads} />
+            <LeadsTable leads={leads} onRefresh={fetchLeads} lang={lang} />
           )}
         </section>
 

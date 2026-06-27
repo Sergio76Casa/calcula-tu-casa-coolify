@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { pbClient } from "@/lib/pocketbase-client";
 import type { SocialBanner } from "./BannersAdmin";
+import { T, type Lang } from "@/lib/translations";
 
 interface Props {
   banner:  SocialBanner | null;
   onClose: () => void;
   onSaved: () => void;
+  lang?:   Lang;
 }
 
 // ─── Postal code lookup: OpenDataSoft geonames ───────────────────────────────
@@ -15,7 +17,6 @@ interface Props {
 async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
   const cleanInput = cityName.trim();
   
-  // Normalizar y extraer palabras clave significativas (removiendo acentos y conectores comunes)
   const words = cleanInput
     .toLowerCase()
     .normalize("NFD")
@@ -28,7 +29,6 @@ async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
     whereClause = `place_name like "${cleanInput}" AND country_code="ES"`;
   } else {
     const clauses = words.map(word => {
-      // Tolerar variantes catalán/castellano de "San" y "Sant"
       if (word === "san" || word === "sant") {
         return `(place_name like "san*" or place_name like "sant*")`;
       }
@@ -55,8 +55,6 @@ async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
     throw new Error("No se encontraron códigos postales para esa zona");
   }
 
-  // Filtrado inteligente: nos quedamos solo con los códigos de la provincia con más coincidencias
-  // para evitar códigos postales homónimos en otras comunidades autónomas.
   const prefixes = rawCodes.map(code => code.substring(0, 2));
   const counts: Record<string, number> = {};
   let maxPrefix = "";
@@ -74,11 +72,9 @@ async function fetchPostalCodesForCity(cityName: string): Promise<string[]> {
   return filtered.sort();
 }
 
-
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function BannerForm({ banner, onClose, onSaved }: Props) {
+export default function BannerForm({ banner, onClose, onSaved, lang = "es" }: Props) {
   const [name,      setName]      = useState(banner?.location_name ?? "");
   const [codes,     setCodes]     = useState(Array.isArray(banner?.postal_codes) ? banner.postal_codes.join(", ") : "");
   const [active,    setActive]    = useState(banner?.is_active ?? true);
@@ -87,8 +83,10 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
   const [cpLoading, setCpLoading] = useState(false);
   const [cpError,   setCpError]   = useState<string | null>(null);
 
+  const t = T(lang).admin.bannerForm;
+
   async function handleAutocomplete() {
-    if (!name.trim()) { setCpError("Escribe primero el nombre de la zona"); return; }
+    if (!name.trim()) { setCpError(t.errorEmptyName); return; }
     setCpLoading(true);
     setCpError(null);
     try {
@@ -96,14 +94,14 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
       setCodes(found.join(", "));
     } catch (e) {
       console.error("[Autocompletar CPs]", e);
-      setCpError(e instanceof Error ? e.message : "Error desconocido");
+      setCpError(e instanceof Error ? e.message : "Error");
     } finally {
       setCpLoading(false);
     }
   }
 
   async function handleSave() {
-    if (!name.trim()) { setError("El nombre de la zona es obligatorio"); return; }
+    if (!name.trim()) { setError(t.errorRequiredName); return; }
     setSaving(true);
     setError(null);
 
@@ -133,7 +131,7 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
 
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white">
-            {banner ? "Editar zona" : "Nueva zona"}
+            {banner ? t.titleEdit : t.titleNew}
           </h2>
           <button
             onClick={onClose}
@@ -155,14 +153,14 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
           {/* Nombre + botón Autocompletar */}
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Nombre de la zona
+              {t.nameLabel}
             </span>
             <div className="flex gap-2 mt-1.5">
               <input
                 type="text"
                 value={name}
                 onChange={e => { setName(e.target.value); setCpError(null); }}
-                placeholder="Ej: Eixample, Gracia, Chamberí..."
+                placeholder={t.namePlaceholder}
                 className="flex-1 min-w-0 bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-colors"
               />
               <button
@@ -172,8 +170,8 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-white/10 hover:border-white/25 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {cpLoading
-                  ? <><span className="w-3 h-3 border border-slate-500 border-t-slate-200 rounded-full animate-spin" />Buscando...</>
-                  : "Autocompletar CPs"}
+                  ? <><span className="w-3 h-3 border border-slate-500 border-t-slate-200 rounded-full animate-spin" />{t.autocompleteLoading}</>
+                  : t.autocompleteBtn}
               </button>
             </div>
             {cpError && (
@@ -184,25 +182,25 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
           {/* Códigos postales */}
           <label className="block">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Códigos postales (separados por coma)
+              {t.codesLabel}
             </span>
             <input
               type="text"
               value={codes}
               onChange={e => setCodes(e.target.value)}
-              placeholder="08001, 08002, 08003"
+              placeholder={t.codesPlaceholder}
               className="mt-1.5 w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-colors"
             />
             <p className="text-xs text-slate-600 mt-1.5">
-              Sin códigos postales → actúa como fallback genérico para cualquier IP
+              {t.codesInfo}
             </p>
           </label>
 
           {/* Toggle Activo */}
           <div className="flex items-center justify-between bg-slate-800 border border-white/10 rounded-xl px-4 py-3">
             <div>
-              <p className="text-sm text-white font-medium">Activo</p>
-              <p className="text-xs text-slate-500">Visible en la landing page</p>
+              <p className="text-sm text-white font-medium">{t.statusLabel}</p>
+              <p className="text-xs text-slate-500">{t.statusInfo}</p>
             </div>
             <button
               type="button"
@@ -225,14 +223,14 @@ export default function BannerForm({ banner, onClose, onSaved }: Props) {
             onClick={onClose}
             className="flex-1 py-2.5 text-sm text-slate-400 hover:text-white border border-white/10 hover:border-white/30 rounded-xl transition-colors"
           >
-            Cancelar
+            {t.cancel}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="flex-1 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
           >
-            {saving ? "Guardando..." : "Guardar zona"}
+            {saving ? "..." : t.save}
           </button>
         </div>
       </div>

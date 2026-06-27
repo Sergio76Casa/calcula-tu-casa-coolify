@@ -1,3 +1,7 @@
+"use client";
+
+import { T, type Lang } from "@/lib/translations";
+
 export interface Metrics {
   total:     number;
   pdfPct:    number;
@@ -30,36 +34,40 @@ function Card({ label, value, sub, color = "text-white", icon }: CardProps) {
 export default function MetricsRow({ 
   metrics, 
   abMode = "random", 
-  onModeChange 
+  onModeChange,
+  lang = "es"
 }: { 
   metrics: Metrics;
   abMode?: string;
   onModeChange?: (mode: string) => void;
+  lang?: Lang;
 }) {
+  const t = T(lang).admin.metrics;
+  
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <Card
         icon="👤"
-        label="Total Leads"
+        label={t.totalLeads}
         value={String(metrics.total)}
-        sub="contactos captados"
+        sub={t.totalLeadsSub}
         color="text-emerald-400"
       />
       <Card
         icon="📄"
-        label="Ratio PDF"
+        label={t.ratioPdf}
         value={`${metrics.pdfPct}%`}
-        sub="descargaron el informe"
+        sub={t.ratioPdfSub}
         color="text-blue-400"
       />
       
       {/* Casilla Test A/B Interactiva */}
       <div className="bg-slate-900 border border-white/10 rounded-2xl p-5 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Test A/B</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">{t.testAb}</p>
           <div className="flex gap-2">
-            <a href="/?v=A" target="_blank" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded border border-white/10 text-slate-400 transition-colors">Ver A</a>
-            <a href="/?v=B" target="_blank" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded border border-white/10 text-slate-400 transition-colors">Ver B</a>
+            <a href="/?v=A" target="_blank" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded border border-white/10 text-slate-400 transition-colors">{t.viewA}</a>
+            <a href="/?v=B" target="_blank" className="text-[10px] bg-slate-800 hover:bg-slate-700 px-1.5 py-0.5 rounded border border-white/10 text-slate-400 transition-colors">{t.viewB}</a>
           </div>
         </div>
         
@@ -73,18 +81,18 @@ export default function MetricsRow({
             onChange={(e) => onModeChange?.(e.target.value)}
             className="bg-slate-800 border border-white/10 rounded-lg text-[10px] px-2 py-1 text-white outline-none focus:border-purple-500 cursor-pointer"
           >
-            <option value="random">Auto (50/50)</option>
-            <option value="A">Fijar A</option>
-            <option value="B">Fijar B</option>
+            <option value="random">{t.autoMode}</option>
+            <option value="A">{t.fixA}</option>
+            <option value="B">{t.fixB}</option>
           </select>
         </div>
       </div>
 
       <Card
         icon="📡"
-        label="Origen Top"
+        label={t.topSource}
         value={metrics.topSource}
-        sub="fuente con más leads"
+        sub={t.topSourceSub}
         color="text-amber-400"
       />
     </div>

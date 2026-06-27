@@ -5,6 +5,7 @@ import {
   buildBarrioPrompt,
   buildEntornoFallbackPrompt,
 } from "./prompts";
+import { valuationSchema, barrioSchema, entornoFallbackSchema } from "./schemas";
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -22,44 +23,7 @@ export async function callGemini(
         temperature: 0.2,
         responseMimeType: "application/json",
         maxOutputTokens: 8000,
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            precio_sugerido: { type: "INTEGER" },
-            rango_precios: {
-              type: "OBJECT",
-              properties: {
-                minimo: { type: "INTEGER" },
-                maximo: { type: "INTEGER" },
-              },
-              required: ["minimo", "maximo"],
-            },
-            argumentario_venta: { type: "STRING" },
-            precio_por_m2_zona: { type: "INTEGER" },
-            ajuste_aplicado_pct: { type: "NUMBER" },
-            puntos_fuertes: { type: "ARRAY", items: { type: "STRING" } },
-            puntos_a_mejorar: { type: "ARRAY", items: { type: "STRING" } },
-            recomendacion_precio_salida: { type: "STRING" },
-            precio_alquiler_estimado: { type: "INTEGER" },
-            rentabilidad_bruta_pct: { type: "NUMBER" },
-            tiempo_venta_estimado_dias: { type: "INTEGER" },
-            tendencia_mercado_12m: { type: "NUMBER" },
-          },
-          required: [
-            "precio_sugerido",
-            "rango_precios",
-            "argumentario_venta",
-            "precio_por_m2_zona",
-            "ajuste_aplicado_pct",
-            "puntos_fuertes",
-            "puntos_a_mejorar",
-            "recomendacion_precio_salida",
-            "precio_alquiler_estimado",
-            "rentabilidad_bruta_pct",
-            "tiempo_venta_estimado_dias",
-            "tendencia_mercado_12m",
-          ],
-        },
+        responseSchema: valuationSchema,
       },
     }),
     signal: AbortSignal.timeout(30000),
@@ -133,21 +97,7 @@ export async function callGeminiBarrio(
           temperature: 0.3,
           responseMimeType: "application/json",
           maxOutputTokens: 4000,
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              tipo_barrio: { type: "STRING" },
-              puntuacion_servicios: { type: "NUMBER" },
-              descripcion: { type: "STRING" },
-              ventajas_ubicacion: { type: "ARRAY", items: { type: "STRING" } },
-            },
-            required: [
-              "tipo_barrio",
-              "puntuacion_servicios",
-              "descripcion",
-              "ventajas_ubicacion",
-            ],
-          },
+          responseSchema: barrioSchema,
         },
       }),
       signal: AbortSignal.timeout(15000),
@@ -182,117 +132,7 @@ export async function callGeminiEntornoFallback(
           temperature: 0.4,
           responseMimeType: "application/json",
           maxOutputTokens: 2000,
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              colegios: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              supermercados: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              farmacias: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              transporte: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              parques: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              restaurantes: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              gasolineras: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-              salud: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    nombre: { type: "STRING" },
-                    distancia_m: { type: "NUMBER" },
-                    tipo: { type: "STRING" },
-                  },
-                  required: ["nombre", "distancia_m", "tipo"],
-                },
-              },
-            },
-            required: [
-              "colegios",
-              "supermercados",
-              "farmacias",
-              "transporte",
-              "parques",
-              "restaurantes",
-              "gasolineras",
-              "salud",
-            ],
-          },
+          responseSchema: entornoFallbackSchema,
         },
       }),
       signal: AbortSignal.timeout(10000),

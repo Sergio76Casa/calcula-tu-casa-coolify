@@ -1,40 +1,102 @@
 "use client";
 
 import type { EntornoData, AnalisisBarrio } from "@/lib/valorar/types";
+import { type Lang } from "@/lib/translations";
 
 interface NeighbourhoodDetailProps {
   entorno: EntornoData | null | undefined;
   analisisBarrio: AnalisisBarrio | null | undefined;
+  lang?: Lang;
 }
 
+const LOCAL_TX: Record<Lang, {
+  title: string;
+  realOsm: string;
+  simGemini: string;
+  notFound: string;
+  cats: Record<string, string>;
+}> = {
+  es: {
+    title: "📍 Tu barrio en detalle",
+    realOsm: "🛰️ Datos reales OSM",
+    simGemini: "🤖 Simulación Gemini IA",
+    notFound: "No encontrado",
+    cats: {
+      colegios: "Colegios",
+      supermercados: "Supermercados",
+      farmacias: "Farmacias",
+      transporte: "Transporte",
+      parques: "Parques",
+      restaurantes: "Restaurantes",
+      gasolineras: "Gasolineras",
+      salud: "Salud",
+    }
+  },
+  ca: {
+    title: "📍 El teu barri en detall",
+    realOsm: "🛰️ Dades reals OSM",
+    simGemini: "🤖 Simulació Gemini IA",
+    notFound: "No trobat",
+    cats: {
+      colegios: "Col·legis",
+      supermercados: "Supermercats",
+      farmacias: "Farmàcies",
+      transporte: "Transport",
+      parques: "Parcs",
+      restaurantes: "Restaurants",
+      gasolineras: "Gasolineres",
+      salud: "Centres de salut",
+    }
+  },
+  en: {
+    title: "📍 Your neighbourhood in detail",
+    realOsm: "🛰️ Real OSM Data",
+    simGemini: "🤖 Gemini AI Simulation",
+    notFound: "Not found",
+    cats: {
+      colegios: "Schools",
+      supermercados: "Supermarkets",
+      farmacias: "Pharmacies",
+      transporte: "Transport",
+      parques: "Parks",
+      restaurantes: "Restaurants",
+      gasolineras: "Petrol stations",
+      salud: "Health centres",
+    }
+  }
+};
+
 const CATS = [
-  { key: "colegios", label: "Colegios", emoji: "🏫" },
-  { key: "supermercados", label: "Supermercados", emoji: "🛒" },
-  { key: "farmacias", label: "Farmacias", emoji: "💊" },
-  { key: "transporte", label: "Transporte", emoji: "🚇" },
-  { key: "parques", label: "Parques", emoji: "🌳" },
-  { key: "restaurantes", label: "Restaurantes", emoji: "🍽️" },
-  { key: "gasolineras", label: "Gasolineras", emoji: "⛽" },
-  { key: "salud", label: "Salud", emoji: "🏥" },
+  { key: "colegios", emoji: "🏫" },
+  { key: "supermercados", emoji: "🛒" },
+  { key: "farmacias", emoji: "💊" },
+  { key: "transporte", emoji: "🚇" },
+  { key: "parques", emoji: "🌳" },
+  { key: "restaurantes", emoji: "🍽️" },
+  { key: "gasolineras", emoji: "⛽" },
+  { key: "salud", emoji: "🏥" },
 ] as const;
 
 export default function NeighbourhoodDetail({
   entorno,
   analisisBarrio,
+  lang = "es",
 }: NeighbourhoodDetailProps) {
   if (!entorno && !analisisBarrio) return null;
+
+  const t = LOCAL_TX[lang];
 
   return (
     <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-          📍 Tu barrio en detalle
+          {t.title}
         </p>
         {entorno?.origen && (
           <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400">
             {entorno.origen === "overpass"
-              ? "🛰️ Datos reales OSM"
-              : "🤖 Simulación Gemini IA"}
+              ? t.realOsm
+              : t.simGemini}
           </span>
         )}
       </div>
@@ -73,9 +135,10 @@ export default function NeighbourhoodDetail({
       {/* Grid de servicios */}
       {entorno && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-          {CATS.map(({ key, label, emoji }) => {
-            const pois = entorno[key];
+          {CATS.map(({ key, emoji }) => {
+            const pois = (entorno as any)[key];
             const first = pois?.[0];
+            const label = t.cats[key];
             return (
               <div
                 key={key}
@@ -99,7 +162,7 @@ export default function NeighbourhoodDetail({
                     </p>
                   </>
                 ) : (
-                  <p className="text-[10px] text-slate-600">No encontrado</p>
+                  <p className="text-[10px] text-slate-600">{t.notFound}</p>
                 )}
               </div>
             );

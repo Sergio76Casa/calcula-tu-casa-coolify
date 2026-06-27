@@ -2,12 +2,19 @@
 
 import { useState } from "react";
 import { pbClient } from "@/lib/pocketbase-client";
+import { T, type Lang } from "@/lib/translations";
 
-export default function LoginGate() {
+interface LoginGateProps {
+  lang?: Lang;
+}
+
+export default function LoginGate({ lang = "es" }: LoginGateProps) {
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
+
+  const t = T(lang).admin.login;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -16,7 +23,7 @@ export default function LoginGate() {
     try {
       await pbClient.admins.authWithPassword(email, password);
     } catch (err) {
-      setError("Credenciales incorrectas. Inténtalo de nuevo.");
+      setError(t.error);
     } finally {
       setLoading(false);
     }
@@ -30,14 +37,14 @@ export default function LoginGate() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-500/10 border border-blue-400/20 rounded-2xl mb-4">
             <span className="text-2xl">🔐</span>
           </div>
-          <h1 className="text-2xl font-black text-white">Panel Admin</h1>
-          <p className="text-slate-500 text-sm mt-1">CalculaTuCasa · Acceso restringido</p>
+          <h1 className="text-2xl font-black text-white">{t.title}</h1>
+          <p className="text-slate-500 text-sm mt-1">{t.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit}
           className="bg-slate-900 border border-white/10 rounded-2xl p-6 space-y-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Email</label>
+            <label className="block text-sm text-slate-400 mb-1.5">{t.email}</label>
             <input
               type="email" value={email} required autoComplete="email"
               onChange={(e) => setEmail(e.target.value)}
@@ -46,7 +53,7 @@ export default function LoginGate() {
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Contraseña</label>
+            <label className="block text-sm text-slate-400 mb-1.5">{t.password}</label>
             <input
               type="password" value={password} required autoComplete="current-password"
               onChange={(e) => setPassword(e.target.value)}
@@ -62,7 +69,7 @@ export default function LoginGate() {
 
           <button type="submit" disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-400 hover:to-emerald-400 disabled:opacity-50 text-white font-bold rounded-xl transition-all duration-200">
-            {loading ? "Accediendo..." : "Acceder al panel"}
+            {loading ? t.loading : t.button}
           </button>
         </form>
 

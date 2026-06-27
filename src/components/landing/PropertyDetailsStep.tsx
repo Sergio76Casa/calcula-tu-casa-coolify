@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { T, type Lang } from "@/lib/translations";
+import { EnergySelector, PillGroup, ToggleOption } from "./FormControls";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -26,13 +27,6 @@ interface PropertyDetailsStepProps {
   onBack?: () => void;
 }
 
-// ─── Colores EU para certificados energéticos ─────────────────────────────────
-
-const ENERGY_CERTS = ["A","B","C","D","E","F","G"] as const;
-const ENERGY_BG: Record<string, string> = {
-  A:"#166534", B:"#15803d", C:"#4d7c0f", D:"#a16207", E:"#9a3412", F:"#b91c1c", G:"#7f1d1d",
-};
-
 // ─── Datos de opciones ────────────────────────────────────────────────────────
 
 const HAB_OPTIONS = [
@@ -42,86 +36,6 @@ const HAB_OPTIONS = [
   { value: 4, label: "4+" },
 ];
 
-// ─── Subcomponente: selector certificado energético ──────────────────────────
-
-function EnergySelector({ value, pendingLabel, onChange }: {
-  value: EnergyCertificate | null;
-  pendingLabel: string;
-  onChange: (v: EnergyCertificate) => void;
-}) {
-  const opts: EnergyCertificate[] = [...ENERGY_CERTS, "pending"];
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {opts.map((cert) => {
-        const sel     = value === cert;
-        const colored = sel && cert !== "pending";
-        return (
-          <button key={cert} type="button" onClick={() => onChange(cert)}
-            style={colored ? { backgroundColor: ENERGY_BG[cert], borderColor: ENERGY_BG[cert] } : undefined}
-            className={`px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-lg border-2 text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-              sel
-                ? cert === "pending"
-                  ? "border-blue-400 bg-blue-500/20 text-white"
-                  : "text-white"
-                : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
-            }`}>
-            {cert === "pending" ? pendingLabel : cert}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Subcomponente: selector de pastillas ─────────────────────────────────────
-
-function PillGroup<T extends string | number>({
-  options, value, onChange, error,
-}: {
-  options: readonly { value: T; label: string }[];
-  value: T | null;
-  onChange: (v: T) => void;
-  error?: string;
-}) {
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
-          <button key={String(o.value)} type="button" onClick={() => onChange(o.value)}
-            className={`px-5 py-2.5 rounded-xl border-2 font-semibold text-sm transition-all active:scale-95 ${
-              value === o.value
-                ? "border-blue-400 bg-blue-500/20 text-white shadow-md shadow-blue-500/10"
-                : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
-            }`}>
-            {o.label}
-          </button>
-        ))}
-      </div>
-      {error && <p role="alert" className="mt-2 text-red-400 text-xs">{error}</p>}
-    </div>
-  );
-}
-
-// ─── Subcomponente: interruptor (toggle) ──────────────────────────────────────
-
-function ToggleOption({ label, emoji, value, onChange }: {
-  label: string; emoji: string; value: boolean; onChange: (v: boolean) => void;
-}) {
-  return (
-    <button type="button" onClick={() => onChange(!value)}
-      className={`flex items-center justify-between w-full px-4 py-3.5 rounded-xl border-2 transition-all ${
-        value ? "border-blue-400 bg-blue-500/20" : "border-white/10 bg-white/5 hover:border-white/20"
-      }`}>
-      <span className="flex items-center gap-3">
-        <span className="text-lg" aria-hidden="true">{emoji}</span>
-        <span className="text-sm font-semibold text-white">{label}</span>
-      </span>
-      <span className={`relative w-10 h-5 rounded-full transition-colors ${value ? "bg-blue-400" : "bg-white/20"}`}>
-        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${value ? "left-5" : "left-0.5"}`} />
-      </span>
-    </button>
-  );
-}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 

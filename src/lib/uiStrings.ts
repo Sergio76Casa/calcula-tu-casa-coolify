@@ -5,6 +5,11 @@ const ui = {
     toast: {
       prefix: "Alguien en",
       suffix: "acaba de valorar su propiedad",
+      phrases: [
+        (name: string, loc: string, price: string) => `${name} de ${loc} acaba de descubrir que su piso vale ~${price}`,
+        (name: string, loc: string, price: string) => `${name} de ${loc} acaba de valorar su vivienda: ~${price}`,
+        (name: string, loc: string, price: string) => `${name} de ${loc} conoce ya el valor de su casa: ~${price}`,
+      ] as const,
     },
     pdf: {
       // ── existentes ──────────────────────────────────────────────────────────
@@ -69,6 +74,11 @@ const ui = {
     toast: {
       prefix: "Algu a",
       suffix: "acaba de valorar el seu habitatge",
+      phrases: [
+        (name: string, loc: string, price: string) => `${name} de ${loc} acaba de descobrir que el seu pis val ~${price}`,
+        (name: string, loc: string, price: string) => `${name} de ${loc} acaba de valorar el seu habitatge: ~${price}`,
+        (name: string, loc: string, price: string) => `${name} de ${loc} ja coneix el valor de casa seva: ~${price}`,
+      ] as const,
     },
     pdf: {
       // ── existents ───────────────────────────────────────────────────────────
@@ -133,6 +143,11 @@ const ui = {
     toast: {
       prefix: "Someone in",
       suffix: "just valued their home",
+      phrases: [
+        (name: string, loc: string, price: string) => `${name} from ${loc} just discovered their apartment is worth ~${price}`,
+        (name: string, loc: string, price: string) => `${name} from ${loc} just valued their home: ~${price}`,
+        (name: string, loc: string, price: string) => `${name} from ${loc} now knows their home's value: ~${price}`,
+      ] as const,
     },
     pdf: {
       // ── existing ────────────────────────────────────────────────────────────
@@ -196,3 +211,4 @@ const ui = {
 } as const;
 
 export function U(lang: Lang) { return ui[lang]; }
+export type UiStrings = ReturnType<typeof U>;

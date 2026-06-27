@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { T, type Lang } from "@/lib/translations";
 
 interface Props {
   leadId:           string | null;
   telefono_inicial: string | null;
   onClose:          () => void;
+  lang?:            Lang;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -59,11 +61,9 @@ function StepDots({ step }: { step: number }) {
   );
 }
 
-const TITLES = ["¿Cuándo quieres vender?", "Estado de la vivienda", "Confirma tu contacto"];
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SellModal({ leadId, telefono_inicial, onClose }: Props) {
+export default function SellModal({ leadId, telefono_inicial, onClose, lang = "es" }: Props) {
   const [step,     setStep]     = useState<0 | 1 | 2 | 3>(0);
   const [urgencia, setUrgencia] = useState("");
   const [estado,   setEstado]   = useState("");
@@ -71,13 +71,25 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
   const [saving,   setSaving]   = useState(false);
   const [done,     setDone]     = useState(false);
   const [error,    setError]    = useState<string | null>(null);
-  
-  console.log("DEBUG - SellModal render:", { leadId, telefono_inicial, telefono });
-  
+
+  const t = T(lang).sellModal;
+
+  const urgenciaOpts = URGENCIA_OPTS.map(o => ({
+    ...o,
+    label: t.urgencia[o.v as keyof typeof t.urgencia]?.label || o.label,
+    sub: t.urgencia[o.v as keyof typeof t.urgencia]?.sub || o.sub
+  }));
+
+  const estadoOpts = ESTADO_OPTS.map(o => ({
+    ...o,
+    label: t.estado[o.v as keyof typeof t.estado]?.label || o.label,
+    sub: t.estado[o.v as keyof typeof t.estado]?.sub || o.sub
+  }));
+
   const hasInitialPhone = !!(telefono_inicial && telefono_inicial.trim().length > 0);
 
   async function handleSubmit() {
-    if (!telefono.trim()) { setError("Introduce tu teléfono de contacto"); return; }
+    if (!telefono.trim()) { setError(t.errorPhone); return; }
     setSaving(true);
     setError(null);
     if (leadId) {
@@ -97,19 +109,19 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
         });
 
         if (!res.ok) {
-          setError("No se pudo guardar. Inténtalo de nuevo.");
+          setError(t.errorApi);
           setSaving(false);
           return;
         }
 
         const data = await res.json();
         if (data.error) {
-          setError("No se pudo guardar. Inténtalo de nuevo.");
+          setError(t.errorApi);
           setSaving(false);
           return;
         }
       } catch (err) {
-        setError("No se pudo guardar. Inténtalo de nuevo.");
+        setError(t.errorApi);
         setSaving(false);
         return;
       }
@@ -124,7 +136,7 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-base font-bold text-white">
-            {done ? "¡Todo listo!" : step === 0 ? "Vende con expertos" : TITLES[step - 1]}
+            {done ? t.stepDone : step === 0 ? t.step0.title : t.stepTitles[step - 1]}
           </h2>
           <button onClick={onClose} aria-label="Cerrar"
             className="text-slate-500 hover:text-white text-xl leading-none transition-colors">✕</button>
@@ -136,11 +148,11 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
             <div className="w-16 h-16 rounded-full bg-emerald-400/20 border-2 border-emerald-400/50 flex items-center justify-center mx-auto animate-pulse">
               <span className="text-3xl">✅</span>
             </div>
-            <p className="text-white font-bold text-lg">¡Solicitud enviada!</p>
-            <p className="text-slate-400 text-sm">Un experto se pondrá en contacto contigo en las próximas horas para coordinar tu venta.</p>
+            <p className="text-white font-bold text-lg">{t.successTitle}</p>
+            <p className="text-slate-400 text-sm">{t.successDesc}</p>
             <button onClick={onClose}
               className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition-colors">
-              Perfecto, gracias
+              {t.successBtn}
             </button>
           </div>
         ) : (
@@ -151,21 +163,18 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
                 <div className="w-12 h-12 bg-emerald-400/10 rounded-full flex items-center justify-center mx-auto">
                   <span className="text-2xl">🎯</span>
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed">
-                  Nuestros agentes especializados en tu zona pueden ayudarte a{" "}
-                  <strong className="text-white">vender al mejor precio posible</strong>, sin complicaciones.
-                </p>
+                <p className="text-slate-300 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: t.step0.desc }} />
                 <div className="space-y-2 text-left">
-                  {['Valoración física gratuita', 'Acceso a compradores cualificados', 'Gestión completa de la venta'].map(b => (
+                  {t.step0.bullets.map(b => (
                     <div key={b} className="flex items-center gap-2 text-sm text-slate-300">
                       <span className="text-emerald-400">✓</span> {b}
                     </div>
                   ))}
                 </div>
                 <button onClick={() => setStep(1)} className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-xl transition-colors">
-                  Quiero vender mi propiedad →
+                  {t.step0.btn}
                 </button>
-                <p className="text-xs text-slate-600">Sin compromiso · El contacto es gratuito</p>
+                <p className="text-xs text-slate-600">{t.step0.info}</p>
               </div>
             )}
 
@@ -175,13 +184,13 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
             {/* ── Step 1 ─────────────────────────────────────────────────────── */}
             {step === 1 && (
               <div className="space-y-3">
-                {URGENCIA_OPTS.map(o => (
+                {urgenciaOpts.map(o => (
                   <OptionCard key={o.v} icon={o.icon} label={o.label} sub={o.sub}
                     selected={urgencia === o.v} onClick={() => setUrgencia(o.v)} />
                 ))}
                 <button type="button" disabled={!urgencia} onClick={() => setStep(2)}
                   className="w-full mt-2 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl transition-colors">
-                  Siguiente →
+                  {t.next}
                 </button>
               </div>
             )}
@@ -189,18 +198,18 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
             {/* ── Step 2 ─────────────────────────────────────────────────────── */}
             {step === 2 && (
               <div className="space-y-3">
-                {ESTADO_OPTS.map(o => (
+                {estadoOpts.map(o => (
                   <OptionCard key={o.v} icon={o.icon} label={o.label} sub={o.sub}
                     selected={estado === o.v} onClick={() => setEstado(o.v)} />
                 ))}
                 <div className="flex gap-2 mt-2">
                   <button type="button" onClick={() => setStep(1)}
                     className="flex-1 py-3 border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded-xl transition-colors text-sm">
-                    ← Atrás
+                    {t.back}
                   </button>
                   <button type="button" disabled={!estado} onClick={() => setStep(3)}
                     className="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl transition-colors">
-                    Siguiente →
+                    {t.next}
                   </button>
                 </div>
               </div>
@@ -211,33 +220,33 @@ export default function SellModal({ leadId, telefono_inicial, onClose }: Props) 
               <div className="space-y-4">
                 {hasInitialPhone ? (
                   <div className="bg-emerald-400/5 border border-emerald-400/20 rounded-xl p-4 text-center">
-                    <p className="text-white text-sm font-medium mb-1">¡Perfecto!</p>
+                    <p className="text-white text-sm font-medium mb-1">{t.step3.perfect}</p>
                     <p className="text-slate-400 text-xs">
-                      Usaremos tu teléfono <span className="text-emerald-400 font-bold">{telefono_inicial}</span> para contactarte y coordinar la visita.
+                      {t.step3.usePhone.replace("{phone}", telefono_inicial || "")}
                     </p>
                   </div>
                 ) : (
                   <>
-                    <p className="text-slate-400 text-sm">Confirma el teléfono al que llamarte para coordinar la visita de valoración.</p>
+                    <p className="text-slate-400 text-sm">{t.step3.confirmPhone}</p>
                     <input
                       type="tel"
                       value={telefono}
                       onChange={e => { setTelefono(e.target.value); setError(null); }}
-                      placeholder="+34 600 000 000"
+                      placeholder={t.step3.phonePlaceholder}
                       className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
                     />
                   </>
                 )}
-                
+
                 {error && <p className="text-red-400 text-xs">{error}</p>}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setStep(2)}
                     className="flex-1 py-3 border border-white/10 hover:border-white/30 text-slate-400 hover:text-white rounded-xl transition-colors text-sm">
-                    ← Atrás
+                    {t.back}
                   </button>
                   <button type="button" onClick={handleSubmit} disabled={saving}
                     className="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl transition-colors">
-                    {saving ? "Enviando..." : (hasInitialPhone ? "Confirmar y enviar" : "Quiero vender 🚀")}
+                    {saving ? t.sending : (hasInitialPhone ? t.confirmSend : t.wantToSell)}
                   </button>
                 </div>
               </div>

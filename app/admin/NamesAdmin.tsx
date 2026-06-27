@@ -2,17 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { pbClient } from "@/lib/pocketbase-client";
+import { T, type Lang } from "@/lib/translations";
 
 interface SocialProofName {
   id: string;
   name: string;
 }
 
-export default function NamesAdmin() {
+interface NamesAdminProps {
+  lang?: Lang;
+}
+
+export default function NamesAdmin({ lang = "es" }: NamesAdminProps) {
   const [names, setNames] = useState<SocialProofName[]>([]);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
+
+  const t = T(lang).admin.names;
 
   const fetchNames = useCallback(async () => {
     setLoading(true);
@@ -37,9 +44,8 @@ export default function NamesAdmin() {
     const nameToAdd = newName.trim();
     if (!nameToAdd) return;
 
-    // Evitar duplicados locales sencillos
     if (names.some(n => n.name.toLowerCase() === nameToAdd.toLowerCase())) {
-      alert("Este nombre ya está registrado.");
+      alert(t.alreadyRegistered);
       return;
     }
 
@@ -50,7 +56,7 @@ export default function NamesAdmin() {
       setNewName("");
       fetchNames();
     } catch (err) {
-      alert("Error al guardar el nombre.");
+      alert(t.errorSave);
     }
   }
 
@@ -59,7 +65,7 @@ export default function NamesAdmin() {
       await pbClient.collection("social_proof_names").delete(id);
       fetchNames();
     } catch (err) {
-      alert("Error al eliminar el nombre.");
+      alert(t.errorDelete);
     }
   }
 
@@ -71,14 +77,14 @@ export default function NamesAdmin() {
           className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors"
         >
           <span className="text-[10px]">{collapsed ? "▶" : "▼"}</span>
-          <span>👥 Social Proof · Nombres de pila ({names.length})</span>
+          <span>{t.title.replace("{count}", String(names.length))}</span>
         </button>
       </div>
 
       {!collapsed && (
         <div className="mt-6 space-y-6">
           <p className="text-slate-500 text-xs">
-            Añade o elimina nombres que se muestran de forma rotativa y aleatoria en las notificaciones flotantes de la web
+            {t.info}
           </p>
 
           {/* Formulario de Adición */}
@@ -87,7 +93,7 @@ export default function NamesAdmin() {
               type="text"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              placeholder="Ej: Sara, Jordi, Sofía..."
+              placeholder={t.placeholder}
               required
               className="flex-1 px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400 placeholder-slate-500"
             />
@@ -95,13 +101,13 @@ export default function NamesAdmin() {
               type="submit"
               className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
             >
-              Añadir Nombre
+              {t.add}
             </button>
           </form>
 
-          {loading && <div className="text-slate-400 text-xs">Cargando nombres...</div>}
+          {loading && <div className="text-slate-400 text-xs">{t.loading}</div>}
 
-          {/* Listado de Nombres en formato Tag/Badge para optimizar espacio */}
+          {/* Listado de Nombres */}
           <div className="flex flex-wrap gap-2 pt-2 max-h-60 overflow-y-auto pr-1">
             {names.map(n => (
               <span
@@ -132,7 +138,7 @@ export default function NamesAdmin() {
               </span>
             ))}
             {names.length === 0 && !loading && (
-              <span className="text-slate-500 text-xs">No hay nombres registrados.</span>
+              <span className="text-slate-500 text-xs">{t.empty}</span>
             )}
           </div>
         </div>

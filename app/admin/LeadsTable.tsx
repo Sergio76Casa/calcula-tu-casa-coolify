@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { T, type Lang } from "@/lib/translations";
 
 export interface LeadRow {
   id:                     string;
@@ -28,18 +29,12 @@ export interface LeadRow {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(iso: string) {
-  return new Date(iso).toLocaleString("es-ES", {
+function fmt(iso: string, lang: Lang) {
+  return new Date(iso).toLocaleString(lang === "en" ? "en-US" : "es-ES", {
     day: "2-digit", month: "short",
     hour: "2-digit", minute: "2-digit",
   });
 }
-
-const URGENCIA_LABEL: Record<string, string> = {
-  menos_3_meses: "< 3 meses",
-  "3_6_meses":   "3–6 meses",
-  solo_info:     "Info",
-};
 
 const ENERGY_BADGE_CLASSES: Record<string, string> = {
   A: "bg-green-800/30 text-green-400 border border-green-500/20",
@@ -64,24 +59,32 @@ function Cell({ children, className = "", title }: { children: React.ReactNode; 
   return <td className={`px-2 py-1.5 text-xs ${className}`} title={title}>{children}</td>;
 }
 
-function exportCSV(rows: LeadRow[]) {
+function exportCSV(rows: LeadRow[], lang: Lang) {
+  const t = T(lang).admin.leads;
+  const tm = T(lang).sellModal.urgencia;
+
   const headers = [
-    "Fecha","Nombre","Email","Tel. 1","Tel. Final","Dirección","Cert. Energético","Valoración €",
-    "A/B","UTM Source","UTM Campaign","PDF","Urgencia","Estado venta","Estado Envío","Agencia Asignada","Fecha Envío"
+    t.headers[0], t.headers[1], t.headers[2], t.headers[3], t.headers[4], t.headers[5], t.headers[6], t.headers[7],
+    t.headers[8], "UTM Source", "UTM Campaign", t.headers[9], t.headers[10], "Estado venta", "Estado Envío", "Agencia Asignada", "Fecha Envío"
   ];
+
+  const yesWord = lang === "en" ? "Yes" : "Sí";
+  const noWord = lang === "en" ? "No" : "No";
+  const pendingWord = lang === "en" ? "Pending" : (lang === "ca" ? "Pendent" : "Pendiente");
+
   const body = rows.map(l => [
-    fmt(l.created_at), l.nombre, l.email, l.telefono, l.telefono_final ?? "",
+    fmt(l.created_at, lang), l.nombre, l.email, l.telefono, l.telefono_final ?? "",
     l.direccion ?? "",
-    l.certificado_energetico === "pending" ? "Pendiente" : (l.certificado_energetico ?? ""),
+    l.certificado_energetico === "pending" ? pendingWord : (l.certificado_energetico ?? ""),
     l.precio ? l.precio.toLocaleString("es-ES") : "",
     l.lang ?? "", l.test_variant ?? "",
     l.utm_source ?? "", l.utm_campaign ?? "",
-    l.pdf_downloaded ? "Sí" : "No",
-    URGENCIA_LABEL[l.venta_urgencia ?? ""] ?? l.venta_urgencia ?? "",
+    l.pdf_downloaded ? yesWord : noWord,
+    l.venta_urgencia ? (tm[l.venta_urgencia as keyof typeof tm]?.label || l.venta_urgencia) : "",
     l.venta_estado ?? "",
-    l.sent_status ?? "No enviado",
+    l.sent_status === "Enviado" ? t.sent : t.notSent,
     l.assigned_agency ?? "—",
-    l.sent_status === "Enviado" ? fmt(l.created_at) : "—"
+    l.sent_status === "Enviado" ? fmt(l.created_at, lang) : "—"
   ]);
   const csv = "﻿" + [headers, ...body]
     .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";"))
@@ -92,14 +95,13 @@ function exportCSV(rows: LeadRow[]) {
   a.click();
 }
 
-// ─── Columnas visibles ────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
-const HEADERS = ["Fecha","Nombre","Email","Tel. 1","Tel. Final","Dirección","Cert.","€","A/B","PDF","Urgencia","Envío"];
-
-// ─── Componente ───────────────────────────────────────────────────────────────
-
-export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onRefresh: () => void }) {
+export default function LeadsTable({ leads, onRefresh, lang = "es" }: { leads: LeadRow[]; onRefresh: () => void; lang?: Lang }) {
   const [q, setQ] = useState("");
+
+  const t = T(lang).admin.leads;
+  const tm = T(lang).sellModal.urgencia;
 
   async function handleDownloadPDF(lead: LeadRow) {
     if (!lead.raw_propiedad || !lead.raw_valoracion) return;
@@ -131,20 +133,20 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
       <div className="flex items-center gap-3 p-4 border-b border-white/10 flex-wrap">
         <input
           type="search" value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Buscar por nombre, email, dirección..."
+          placeholder={t.searchPlaceholder}
           className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-white/10 rounded-xl text-white text-xs placeholder-slate-500 outline-none focus:border-blue-400 transition-colors"
         />
         <button onClick={onRefresh}
           className="px-3 py-2 bg-slate-800 border border-white/10 hover:border-white/30 rounded-xl text-slate-400 hover:text-white text-xs transition-colors">
-          ↻
+          {t.refresh}
         </button>
-        <button onClick={() => exportCSV(leads)}
+        <button onClick={() => exportCSV(leads, lang)}
           className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 rounded-xl text-slate-900 font-bold text-xs transition-colors">
-          ↓ CSV
+          {t.exportCsv}
         </button>
       </div>
 
-      {/* Table — con overflow-x-auto para permitir scroll horizontal en móviles sin romper el layout */}
+      {/* Table */}
       <div className="w-full overflow-x-auto">
         <table className="w-full text-xs table-fixed min-w-[940px]">
           <colgroup>
@@ -163,7 +165,7 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
           </colgroup>
           <thead>
             <tr className="border-b border-white/10 text-left">
-              {HEADERS.map(h => (
+              {t.headers.map(h => (
                 <th key={h} className="px-2 py-2 text-slate-500 font-medium text-[10px] uppercase tracking-wide truncate">
                   {h}
                 </th>
@@ -174,12 +176,12 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={12} className="px-4 py-10 text-center text-slate-600 text-xs">
-                  {q ? "Sin resultados." : "Aún no hay leads registrados."}
+                  {q ? t.emptySearch : t.empty}
                 </td>
               </tr>
             ) : filtered.map(l => (
               <tr key={l.id} className="hover:bg-white/[0.03] transition-colors">
-                <Cell className="text-slate-500 whitespace-nowrap">{fmt(l.created_at)}</Cell>
+                <Cell className="text-slate-500 whitespace-nowrap">{fmt(l.created_at, lang)}</Cell>
                 <Cell className="text-white font-medium truncate">{l.nombre}</Cell>
                 <Cell className="text-slate-300 truncate">{l.email}</Cell>
                 <Cell className="text-slate-300 whitespace-nowrap">{l.telefono}</Cell>
@@ -188,7 +190,7 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
                 <Cell className="text-center">
                   {l.certificado_energetico
                     ? <Badge
-                        text={l.certificado_energetico === "pending" ? "Pend." : l.certificado_energetico.toUpperCase()}
+                        text={l.certificado_energetico === "pending" ? t.pending : l.certificado_energetico.toUpperCase()}
                         cls={ENERGY_BADGE_CLASSES[l.certificado_energetico.toUpperCase()] || "bg-slate-800 text-slate-400"}
                       />
                     : <span className="text-slate-600">—</span>}
@@ -222,25 +224,25 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
                 </Cell>
                 <Cell className="text-center">
                   {l.venta_urgencia
-                    ? <Badge text={URGENCIA_LABEL[l.venta_urgencia] ?? l.venta_urgencia} cls="bg-amber-500/20 text-amber-400" />
+                    ? <Badge text={tm[l.venta_urgencia as keyof typeof tm]?.label || l.venta_urgencia} cls="bg-amber-500/20 text-amber-400" />
                     : <span className="text-slate-600">—</span>}
                 </Cell>
                 <Cell className="text-left py-1">
                   {l.sent_status === "Enviado" ? (
                     <div className="space-y-0.5">
-                      <Badge text="Enviado" cls="bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" />
+                      <Badge text={t.sent} cls="bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" />
                       <div className="text-[10px] text-white truncate font-medium" title={l.assigned_agency || ""}>
                         {l.assigned_agency}
                       </div>
                       <div className="text-[9px] text-slate-500 font-mono">
-                        {fmt(l.created_at)}
+                        {fmt(l.created_at, lang)}
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-0.5">
-                      <Badge text="No enviado" cls="bg-slate-800 text-slate-400 border border-white/5" />
+                      <Badge text={t.notSent} cls="bg-slate-800 text-slate-400 border border-white/5" />
                       <div className="text-[10px] text-slate-500 truncate">
-                        Sin agencia
+                        {t.noAgency}
                       </div>
                     </div>
                   )}
@@ -252,7 +254,7 @@ export default function LeadsTable({ leads, onRefresh }: { leads: LeadRow[]; onR
       </div>
 
       <div className="px-4 py-2 border-t border-white/10 text-[10px] text-slate-600">
-        {filtered.length} de {leads.length} registros
+        {t.totalCount.replace("{count}", String(filtered.length)).replace("{total}", String(leads.length))}
       </div>
     </div>
   );

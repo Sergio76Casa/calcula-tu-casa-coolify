@@ -1,27 +1,32 @@
 "use client";
 
 import type { ValuationResult } from "@/components/landing/LoadingValuationStep";
+import { T, type Lang } from "@/lib/translations";
 
 interface PriceBannerProps {
   result: ValuationResult;
   m2: number;
+  lang?: Lang;
 }
 
 function RangeBar({
   min,
   mid,
   max,
+  lang,
 }: {
   min: number;
   mid: number;
   max: number;
+  lang: Lang;
 }) {
+  const t = T(lang).dashboard.priceBanner;
   const pct = Math.round(((mid - min) / (max - min)) * 100) || 50;
   const labelClamp = Math.max(8, Math.min(80, pct));
   return (
     <div>
       <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 text-left">
-        📊 Rango de mercado
+        {t.range}
       </p>
       <div
         className="relative h-5 bg-white/10 rounded-full mb-1"
@@ -53,19 +58,19 @@ function RangeBar({
             {mid.toLocaleString("es-ES")} €
           </p>
           <p className="text-emerald-400/60 text-[8px] sm:text-[10px] uppercase tracking-wide whitespace-nowrap">
-            Precio sugerido
+            {t.suggested}
           </p>
         </div>
       </div>
       <div className="flex justify-between text-xs mt-1">
         <div className="text-left">
-          <p className="text-slate-500">Mínimo</p>
+          <p className="text-slate-500">{t.minimum}</p>
           <p className="text-slate-300 font-semibold">
             {min.toLocaleString("es-ES")} €
           </p>
         </div>
         <div className="text-right">
-          <p className="text-slate-500">Máximo</p>
+          <p className="text-slate-500">{t.maximum}</p>
           <p className="text-slate-300 font-semibold">
             {max.toLocaleString("es-ES")} €
           </p>
@@ -75,7 +80,8 @@ function RangeBar({
   );
 }
 
-export default function PriceBanner({ result, m2 }: PriceBannerProps) {
+export default function PriceBanner({ result, m2, lang = "es" }: PriceBannerProps) {
+  const t = T(lang).dashboard.priceBanner;
   const {
     precio_sugerido: mid,
     rango_precios: { minimo: min, maximo: max },
@@ -90,7 +96,7 @@ export default function PriceBanner({ result, m2 }: PriceBannerProps) {
   return (
     <div className="bg-slate-800/60 border border-emerald-500/20 rounded-2xl p-6 text-center backdrop-blur-sm">
       <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">
-        Valor de mercado estimado
+        {t.estimated}
       </p>
       <p
         className="text-4xl min-[380px]:text-5xl sm:text-6xl md:text-7xl font-black text-emerald-400 tabular-nums my-3"
@@ -111,7 +117,7 @@ export default function PriceBanner({ result, m2 }: PriceBannerProps) {
         )}
         {alquiler && (
           <span className="inline-flex items-center gap-1 text-xs bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-full px-2.5 py-1">
-            🏠 Alquiler ~{alquiler.toLocaleString("es-ES")} €/mes
+            {t.rent.replace("{price}", alquiler.toLocaleString("es-ES"))}
           </span>
         )}
         {rentabilidad !== undefined && rentabilidad !== null && (
@@ -122,7 +128,7 @@ export default function PriceBanner({ result, m2 }: PriceBannerProps) {
                 : "bg-amber-500/10 border border-amber-500/20 text-amber-300"
             }`}
           >
-            📈 Rentab. {rentabilidad.toFixed(1)}%
+            {t.yield.replace("{pct}", rentabilidad.toFixed(1))}
           </span>
         )}
         {score !== undefined && score !== null && (
@@ -135,7 +141,7 @@ export default function PriceBanner({ result, m2 }: PriceBannerProps) {
                 : "bg-red-500/10 border border-red-500/20 text-red-300"
             }`}
           >
-            ⭐ Score inversión: {score}/10
+            {t.score.replace("{score}", String(score))}
           </span>
         )}
         {tendencia !== undefined && tendencia !== null && (
@@ -146,16 +152,17 @@ export default function PriceBanner({ result, m2 }: PriceBannerProps) {
                 : "bg-red-500/10 border border-red-500/20 text-red-300"
             }`}
           >
-            {tendencia > 0 ? "↑" : "↓"} {Math.abs(tendencia).toFixed(1)}% en 12
-            meses
+            {tendencia > 0
+              ? t.trendUp.replace("{pct}", Math.abs(tendencia).toFixed(1))
+              : t.trendDown.replace("{pct}", Math.abs(tendencia).toFixed(1))}
           </span>
         )}
       </div>
 
       <p className="text-slate-500 text-xs mb-8">
-        Calculado con Gemini 2.5 Flash · datos reales del mercado
+        {t.calculated}
       </p>
-      <RangeBar min={min} mid={mid} max={max} />
+      <RangeBar min={min} mid={mid} max={max} lang={lang} />
     </div>
   );
 }
