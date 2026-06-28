@@ -140,16 +140,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── Valoración Gemini principal ──────────────────────────────────────────
+    // ── Valoración Gemini principal y Análisis Barrio en paralelo ───────────
     const promptVal = buildPrompt(propiedad, testigos, lang);
-    const valoracion = await callGemini(promptVal, GEMINI_API_KEY);
-
-    // ── Análisis barrio ──────────────────────────────────────────────────────
-    const analisisBarrio = await callGeminiBarrio(
-      propiedad.direccion_completa,
-      entorno,
-      GEMINI_API_KEY
-    );
+    const [valoracion, analisisBarrio] = await Promise.all([
+      callGemini(promptVal, GEMINI_API_KEY),
+      callGeminiBarrio(propiedad.direccion_completa, entorno, GEMINI_API_KEY),
+    ]);
 
     // ── Score inversión ──────────────────────────────────────────────────────
     const scoreInversion = calcularScoreInversion(
