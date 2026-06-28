@@ -114,21 +114,12 @@ export async function POST(req: Request) {
     const isManyChat = userAgent.toLowerCase().includes("manychat");
 
     if (isManyChat) {
-      // ── Flujo rápido para ManyChat (Evita Timeout de 10s) ───────────────────
+      // ── Flujo súper rápido para ManyChat (Evita Timeout de 10s) ─────────────
+      // Guardamos la propiedad de inmediato usando la dirección cruda
       if (!propiedadId) {
-        const geoResult = await obtenerCoordenadas(
-          propiedad.direccion_completa,
-          GEMINI_API_KEY
-        );
-        if (geoResult) {
-          coordLat = geoResult.lat;
-          coordLon = geoResult.lon;
-          enrichedAddress = geoResult.enrichedAddress;
-        }
-
         propiedadId = await guardarPropiedadEnBD(
           propiedad,
-          enrichedAddress,
+          propiedad.direccion_completa,
           entorno // vacío inicialmente
         );
       }
@@ -149,35 +140,52 @@ export async function POST(req: Request) {
         null
       );
 
-      // Enriquecimiento en segundo plano para que el informe PDF tenga todos los datos
-      if (coordLat && coordLon) {
-        (async () => {
-          try {
-            console.log("[Background] Iniciando enriquecimiento de datos para ManyChat...");
-            const entornoEnriched = await fetchEntorno(coordLat!, coordLon!);
-            const barrioEnriched = await callGeminiBarrio(
-              enrichedAddress,
-              entornoEnriched,
-              GEMINI_API_KEY
-            );
-            const scoreEnriched = calcularScoreInversion(
-              valoracion,
-              entornoEnriched,
-              propiedad.certificado_energetico
-            );
-            await actualizarDatosEnBD(
-              propiedadId || "",
-              valoracionId,
-              enrichedAddress,
-              entornoEnriched,
-              scoreEnriched,
-              barrioEnriched
-            );
-          } catch (bgErr) {
-            console.error("[Background] Error enriqueciendo datos:", bgErr);
+      // Enriquecimiento completo en segundo plano (geocodificación, Overpass y barrio)
+      (async () => {
+        try {
+          console.log(
+            "[Background] Iniciando geocodificación y enriquecimiento para ManyChat..."
+          );
+          const geoResult = await obtenerCoordenadas(
+            propiedad.direccion_completa,
+            GEMINI_API_KEY
+          );
+          let finalAddress = propiedad.direccion_completa;
+          let lat: number | null = null;
+          let lon: number | null = null;
+          let entornoEnriched = entorno;
+
+          if (geoResult) {
+            lat = geoResult.lat;
+            lon = geoResult.lon;
+            finalAddress = geoResult.enrichedAddress;
+            entornoEnriched = await fetchEntorno(lat, lon);
           }
-        })();
-      }
+
+          const barrioEnriched = await callGeminiBarrio(
+            finalAddress,
+            entornoEnriched,
+            GEMINI_API_KEY
+          );
+
+          const scoreEnriched = calcularScoreInversion(
+            valoracion,
+            entornoEnriched,
+            propiedad.certificado_energetico
+          );
+
+          await actualizarDatosEnBD(
+            propiedadId || "",
+            valoracionId,
+            finalAddress,
+            entornoEnriched,
+            scoreEnriched,
+            barrioEnriched
+          );
+        } catch (bgErr) {
+          console.error("[Background] Error enriqueciendo datos:", bgErr);
+        }
+      })();
 
       return NextResponse.json({
         success: true,
@@ -187,8 +195,7 @@ export async function POST(req: Request) {
         entorno,
         analisis_barrio: null,
         score_inversion: scoreInversion,
-        coordenadas:
-          coordLat && coordLon ? { lat: coordLat, lon: coordLon } : null,
+        coordenadas: null,
       });
     }
 
