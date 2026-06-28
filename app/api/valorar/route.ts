@@ -73,6 +73,10 @@ export async function POST(req: Request) {
 
     const GEMINI_API_KEY =
       process.env.GEMINI_API_KEY_VERTEX || process.env.GEMINI_API_KEY;
+    console.log(
+      "[Gemini Key Debug] Usando clave API con prefijo:",
+      GEMINI_API_KEY ? GEMINI_API_KEY.slice(0, 8) : "NULA"
+    );
     if (!GEMINI_API_KEY) {
       throw new Error(
         "Variables de entorno no configuradas en el proyecto (Falta GEMINI_API_KEY_VERTEX)"
