@@ -13,6 +13,7 @@ import {
   buscarValoracionEnCache,
   guardarPropiedadEnBD,
   guardarValoracionEnBD,
+  actualizarDatosEnBD,
 } from "@/lib/valorar/cache";
 import type { ValoracionGemini } from "@/lib/valorar/types";
 
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
     let propiedadId = propiedad.propiedad_id;
     let coordLat: number | null = null;
     let coordLon: number | null = null;
+    let enrichedAddress = propiedad.direccion_completa;
     let entorno: EntornoData = {
       colegios: [],
       supermercados: [],
@@ -108,6 +110,89 @@ export async function POST(req: Request) {
       salud: [],
     };
 
+    const userAgent = req.headers.get("user-agent") || "";
+    const isManyChat = userAgent.toLowerCase().includes("manychat");
+
+    if (isManyChat) {
+      // ── Flujo rápido para ManyChat (Evita Timeout de 10s) ───────────────────
+      if (!propiedadId) {
+        const geoResult = await obtenerCoordenadas(
+          propiedad.direccion_completa,
+          GEMINI_API_KEY
+        );
+        if (geoResult) {
+          coordLat = geoResult.lat;
+          coordLon = geoResult.lon;
+          enrichedAddress = geoResult.enrichedAddress;
+        }
+
+        propiedadId = await guardarPropiedadEnBD(
+          propiedad,
+          enrichedAddress,
+          entorno // vacío inicialmente
+        );
+      }
+
+      const promptVal = buildPrompt(propiedad, testigos, lang);
+      const valoracion = await callGemini(promptVal, GEMINI_API_KEY);
+
+      const scoreInversion = calcularScoreInversion(
+        valoracion,
+        entorno,
+        propiedad.certificado_energetico
+      );
+
+      const valoracionId = await guardarValoracionEnBD(
+        propiedadId || "",
+        valoracion,
+        scoreInversion,
+        null
+      );
+
+      // Enriquecimiento en segundo plano para que el informe PDF tenga todos los datos
+      if (coordLat && coordLon) {
+        (async () => {
+          try {
+            console.log("[Background] Iniciando enriquecimiento de datos para ManyChat...");
+            const entornoEnriched = await fetchEntorno(coordLat!, coordLon!);
+            const barrioEnriched = await callGeminiBarrio(
+              enrichedAddress,
+              entornoEnriched,
+              GEMINI_API_KEY
+            );
+            const scoreEnriched = calcularScoreInversion(
+              valoracion,
+              entornoEnriched,
+              propiedad.certificado_energetico
+            );
+            await actualizarDatosEnBD(
+              propiedadId || "",
+              valoracionId,
+              enrichedAddress,
+              entornoEnriched,
+              scoreEnriched,
+              barrioEnriched
+            );
+          } catch (bgErr) {
+            console.error("[Background] Error enriqueciendo datos:", bgErr);
+          }
+        })();
+      }
+
+      return NextResponse.json({
+        success: true,
+        valoracion_id: valoracionId,
+        propiedad_id: propiedadId,
+        ...valoracion,
+        entorno,
+        analisis_barrio: null,
+        score_inversion: scoreInversion,
+        coordenadas:
+          coordLat && coordLon ? { lat: coordLat, lon: coordLon } : null,
+      });
+    }
+
+    // ── Flujo estándar completo para la Web ──────────────────────────────────
     if (!propiedadId) {
       const geoResult = await obtenerCoordenadas(
         propiedad.direccion_completa,
@@ -116,7 +201,7 @@ export async function POST(req: Request) {
       if (geoResult) {
         coordLat = geoResult.lat;
         coordLon = geoResult.lon;
-        propiedad.direccion_completa = geoResult.enrichedAddress;
+        enrichedAddress = geoResult.enrichedAddress;
         entorno = await fetchEntorno(coordLat, coordLon);
       }
 
@@ -127,7 +212,7 @@ export async function POST(req: Request) {
           "[Entorno] Overpass no devolvió POIs. Usando fallback con Gemini para simular el entorno..."
         );
         const fallbackEntorno = await callGeminiEntornoFallback(
-          propiedad.direccion_completa,
+          enrichedAddress,
           GEMINI_API_KEY
         );
         if (fallbackEntorno) {
@@ -139,7 +224,7 @@ export async function POST(req: Request) {
 
       propiedadId = await guardarPropiedadEnBD(
         propiedad,
-        propiedad.direccion_completa,
+        enrichedAddress,
         entorno
       );
     }
@@ -148,7 +233,7 @@ export async function POST(req: Request) {
     const promptVal = buildPrompt(propiedad, testigos, lang);
     const [valoracion, analisisBarrio] = await Promise.all([
       callGemini(promptVal, GEMINI_API_KEY),
-      callGeminiBarrio(propiedad.direccion_completa, entorno, GEMINI_API_KEY),
+      callGeminiBarrio(enrichedAddress, entorno, GEMINI_API_KEY),
     ]);
 
     // ── Score inversión ──────────────────────────────────────────────────────

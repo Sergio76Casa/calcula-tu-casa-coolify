@@ -167,3 +167,32 @@ export async function guardarValoracionEnBD(
   });
   return newVal.id;
 }
+
+export async function actualizarDatosEnBD(
+  propiedadId: string,
+  valoracionId: string,
+  enrichedAddress: string,
+  entorno: EntornoData,
+  scoreInversion: number,
+  analisisBarrio: AnalisisBarrio | null
+): Promise<void> {
+  const { pbUpdate } = await import("@/lib/pocketbase");
+  try {
+    await pbUpdate("propiedades", propiedadId, {
+      direccion_completa: enrichedAddress,
+      entorno_json: JSON.stringify(entorno),
+    });
+    await pbUpdate("valoraciones", valoracionId, {
+      score_inversion: scoreInversion,
+      analisis_barrio_json: analisisBarrio
+        ? JSON.stringify(analisisBarrio)
+        : null,
+    });
+    console.log(
+      `[Caché] Registro de propiedad ${propiedadId} y valoración ${valoracionId} enriquecidos en segundo plano.`
+    );
+  } catch (err) {
+    console.error("[Caché] Error actualizando datos en segundo plano:", err);
+  }
+}
+
