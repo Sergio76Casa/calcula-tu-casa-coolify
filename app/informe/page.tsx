@@ -58,6 +58,36 @@ function InformeLoader() {
         try { puntosFuertes = val.puntos_fuertes ? JSON.parse(val.puntos_fuertes) : []; } catch {}
         try { puntosAMejorar = val.puntos_a_mejorar ? JSON.parse(val.puntos_a_mejorar) : []; } catch {}
 
+        // Si el entorno está vacío (p.ej. capturado desde ManyChat de forma rápida),
+        // realizamos la geocodificación y análisis de barrio ahora de forma síncrona en el cliente.
+        const totalPOIs = entorno
+          ? Object.values(entorno).filter(Array.isArray).flat().length
+          : 0;
+
+        if (totalPOIs === 0) {
+          try {
+            const enrichRes = await fetch("/api/enriquece-propiedad", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                propiedadId: lead.propiedad_id,
+                valoracionId: val.id,
+              }),
+            });
+            if (enrichRes.ok) {
+              const enrichData = await enrichRes.json();
+              if (enrichData.success) {
+                entorno = enrichData.entorno;
+                analisisBarrio = enrichData.analisis_barrio;
+                val.score_inversion = enrichData.score_inversion;
+                prop.direccion_completa = enrichData.direccion_completa;
+              }
+            }
+          } catch (enrichErr) {
+            console.error("Error al enriquecer propiedad:", enrichErr);
+          }
+        }
+
         const resultObj = {
           valoracion_id:              val.id,
           propiedad_id:               lead.propiedad_id,

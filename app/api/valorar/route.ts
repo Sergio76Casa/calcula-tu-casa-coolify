@@ -140,55 +140,6 @@ export async function POST(req: Request) {
         null
       );
 
-      // Enriquecimiento completo en segundo plano pospuesto 500ms para permitir que la respuesta HTTP se cierre
-      setTimeout(() => {
-        (async () => {
-          try {
-            console.log(
-              "[Background] Iniciando geocodificación y enriquecimiento para ManyChat..."
-            );
-            const geoResult = await obtenerCoordenadas(
-              propiedad.direccion_completa,
-              GEMINI_API_KEY
-            );
-            let finalAddress = propiedad.direccion_completa;
-            let lat: number | null = null;
-            let lon: number | null = null;
-            let entornoEnriched = entorno;
-
-            if (geoResult) {
-              lat = geoResult.lat;
-              lon = geoResult.lon;
-              finalAddress = geoResult.enrichedAddress;
-              entornoEnriched = await fetchEntorno(lat, lon);
-            }
-
-            const barrioEnriched = await callGeminiBarrio(
-              finalAddress,
-              entornoEnriched,
-              GEMINI_API_KEY
-            );
-
-            const scoreEnriched = calcularScoreInversion(
-              valoracion,
-              entornoEnriched,
-              propiedad.certificado_energetico
-            );
-
-            await actualizarDatosEnBD(
-              propiedadId || "",
-              valoracionId,
-              finalAddress,
-              entornoEnriched,
-              scoreEnriched,
-              barrioEnriched
-            );
-          } catch (bgErr) {
-            console.error("[Background] Error enriqueciendo datos:", bgErr);
-          }
-        })();
-      }, 500);
-
       return NextResponse.json({
         success: true,
         valoracion_id: valoracionId,
