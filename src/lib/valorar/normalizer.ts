@@ -45,7 +45,9 @@ export function normalizarPropiedad(propiedad: PropiedadInput): PropiedadInput {
         ascVal === "true" ||
         ascVal === "1" ||
         ascVal === "sí" ||
-        ascVal === "si";
+        ascVal === "si" ||
+        ascVal === "yes" ||
+        ascVal === "y";
     }
   }
 
@@ -59,7 +61,9 @@ export function normalizarPropiedad(propiedad: PropiedadInput): PropiedadInput {
         jarVal === "true" ||
         jarVal === "1" ||
         jarVal === "sí" ||
-        jarVal === "si";
+        jarVal === "si" ||
+        jarVal === "yes" ||
+        jarVal === "y";
     }
   }
 
