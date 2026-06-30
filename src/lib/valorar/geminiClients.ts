@@ -10,6 +10,67 @@ import { valuationSchema, barrioSchema, entornoFallbackSchema } from "./schemas"
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
+// Versión ultrarrápida para ManyChat: sin thinking, tokens reducidos
+export async function callGeminiManyChat(
+  prompt: string,
+  apiKey: string
+): Promise<ValoracionGemini> {
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        maxOutputTokens: 2000,
+        responseSchema: valuationSchema,
+        thinkingConfig: { thinkingBudget: 0 }, // desactiva el thinking → mucho más rápido
+      },
+    }),
+    signal: AbortSignal.timeout(9000), // timeout estricto de 9s para ManyChat
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`Gemini ManyChat ${res.status}: ${detail}`);
+  }
+
+  const payload = await res.json();
+  const raw: string = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("Gemini ManyChat devolvió respuesta vacía");
+
+  let parsed: ValoracionGemini;
+  try {
+    parsed = JSON.parse(raw) as ValoracionGemini;
+  } catch (parseErr: unknown) {
+    const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    throw new Error(`Gemini ManyChat JSON Parse Error: ${msg}`);
+  }
+
+  // Validar campos mínimos requeridos
+  if (
+    typeof parsed.precio_sugerido !== "number" ||
+    typeof parsed.rango_precios?.minimo !== "number" ||
+    typeof parsed.rango_precios?.maximo !== "number" ||
+    typeof parsed.argumentario_venta !== "string" ||
+    typeof parsed.precio_por_m2_zona !== "number" ||
+    typeof parsed.ajuste_aplicado_pct !== "number" ||
+    !Array.isArray(parsed.puntos_fuertes) ||
+    !Array.isArray(parsed.puntos_a_mejorar) ||
+    typeof parsed.recomendacion_precio_salida !== "string" ||
+    typeof parsed.precio_alquiler_estimado !== "number" ||
+    typeof parsed.rentabilidad_bruta_pct !== "number" ||
+    typeof parsed.tiempo_venta_estimado_dias !== "number" ||
+    typeof parsed.tendencia_mercado_12m !== "number"
+  ) {
+    throw new Error("Gemini ManyChat: respuesta no cumple el contrato JSON");
+  }
+
+  return parsed;
+}
+
+
 export async function callGemini(
   prompt: string,
   apiKey: string

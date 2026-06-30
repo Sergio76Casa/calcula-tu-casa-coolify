@@ -6,6 +6,7 @@ import { obtenerCoordenadas } from "@/lib/valorar/geocoding";
 import { buildPrompt } from "@/lib/valorar/prompts";
 import {
   callGemini,
+  callGeminiManyChat,
   callGeminiBarrio,
   callGeminiEntornoFallback,
 } from "@/lib/valorar/geminiClients";
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
       const promptVal = buildPrompt(propiedad, testigos, lang);
       console.log("[ManyChat] Iniciando llamada a Gemini...");
 
-      const valoracion = await callGemini(promptVal, GEMINI_API_KEY);
+      const valoracion = await callGeminiManyChat(promptVal, GEMINI_API_KEY);
       console.log("[ManyChat] Gemini respondió. Enviando respuesta...");
 
       const entorno: EntornoData = {
