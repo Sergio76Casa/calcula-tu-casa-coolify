@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { propiedad: propiedadRaw, testigos = [], lang = "es" } = body;
+    const { propiedad: propiedadRaw, testigos = [], lang = "es", source } = body;
 
     if (
       !propiedadRaw?.direccion_completa ||
@@ -110,22 +110,22 @@ export async function POST(req: Request) {
       salud: [],
     };
 
-    const userAgent = req.headers.get("user-agent") || "";
-    const isManyChat = userAgent.toLowerCase().includes("manychat");
+    // Detección fiable: ManyChat debe enviar { source: "manychat" } en el body
+    const isManyChat = source?.toLowerCase() === "manychat";
 
     if (isManyChat) {
-      // ── Flujo súper rápido para ManyChat (Evita Timeout de 10s) ─────────────
-      // Guardamos la propiedad de inmediato usando la dirección cruda
-      if (!propiedadId) {
-        propiedadId = await guardarPropiedadEnBD(
-          propiedad,
-          propiedad.direccion_completa,
-          entorno // vacío inicialmente
-        );
-      }
-
+      // ── Flujo rápido para ManyChat (Evita Timeout de 10s) ─────────────────
+      // Ejecutamos guardarPropiedad y callGemini en PARALELO para ahorrar tiempo
       const promptVal = buildPrompt(propiedad, testigos, lang);
-      const valoracion = await callGemini(promptVal, GEMINI_API_KEY);
+
+      const [resolvedPropiedadId, valoracion] = await Promise.all([
+        propiedadId
+          ? Promise.resolve(propiedadId)
+          : guardarPropiedadEnBD(propiedad, propiedad.direccion_completa, entorno),
+        callGemini(promptVal, GEMINI_API_KEY),
+      ]);
+
+      propiedadId = resolvedPropiedadId;
 
       const scoreInversion = calcularScoreInversion(
         valoracion,

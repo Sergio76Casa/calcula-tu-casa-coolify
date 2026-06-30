@@ -26,6 +26,7 @@ export interface RequestBody {
   propiedad: PropiedadInput;
   testigos?: TestigoMercado[];
   lang?: string;
+  source?: string; // "manychat" para el flujo rápido sin geocodificación
 }
 
 export interface ValoracionGemini {
