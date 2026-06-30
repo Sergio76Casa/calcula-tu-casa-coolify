@@ -84,7 +84,55 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── Intentar recuperar de caché ──────────────────────────────────────────
+    // ── Detección ManyChat ANTES de la caché ─────────────────────────────────
+    const isManyChat = source?.toLowerCase() === "manychat";
+
+    if (isManyChat) {
+      // ── Flujo ultrarrápido ManyChat: solo Gemini, BD en background ──────────
+      const promptVal = buildPrompt(propiedad, testigos, lang);
+      console.log("[ManyChat] Iniciando llamada a Gemini...");
+
+      const valoracion = await callGemini(promptVal, GEMINI_API_KEY);
+      console.log("[ManyChat] Gemini respondió. Enviando respuesta...");
+
+      const entorno: EntornoData = {
+        colegios: [], supermercados: [], farmacias: [], transporte: [],
+        parques: [], restaurantes: [], gasolineras: [], salud: [],
+      };
+
+      const scoreInversion = calcularScoreInversion(
+        valoracion,
+        entorno,
+        propiedad.certificado_energetico
+      );
+
+      // ── Guardar en BD en background (fire-and-forget, sin bloquear respuesta)
+      const propiedadIdActual = propiedad.propiedad_id;
+      Promise.resolve().then(async () => {
+        try {
+          const pid = propiedadIdActual
+            ? propiedadIdActual
+            : await guardarPropiedadEnBD(propiedad, propiedad.direccion_completa, entorno);
+          await guardarValoracionEnBD(pid, valoracion, scoreInversion, null);
+          console.log("[ManyChat] BD actualizada en background.");
+        } catch (bgErr) {
+          console.error("[ManyChat] Error guardando en BD en background:", bgErr);
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        valoracion_id: null,
+        propiedad_id: propiedadIdActual || null,
+        ...valoracion,
+        entorno,
+        analisis_barrio: null,
+        score_inversion: scoreInversion,
+        coordenadas: null,
+      });
+    }
+
+    // ── Intentar recuperar de caché (solo flujo web) ──────────────────────────
     const cacheHit = await buscarValoracionEnCache(propiedad);
     if (cacheHit) {
       return NextResponse.json({
@@ -109,48 +157,6 @@ export async function POST(req: Request) {
       gasolineras: [],
       salud: [],
     };
-
-    // Detección fiable: ManyChat debe enviar { source: "manychat" } en el body
-    const isManyChat = source?.toLowerCase() === "manychat";
-
-    if (isManyChat) {
-      // ── Flujo rápido para ManyChat (Evita Timeout de 10s) ─────────────────
-      // Ejecutamos guardarPropiedad y callGemini en PARALELO para ahorrar tiempo
-      const promptVal = buildPrompt(propiedad, testigos, lang);
-
-      const [resolvedPropiedadId, valoracion] = await Promise.all([
-        propiedadId
-          ? Promise.resolve(propiedadId)
-          : guardarPropiedadEnBD(propiedad, propiedad.direccion_completa, entorno),
-        callGemini(promptVal, GEMINI_API_KEY),
-      ]);
-
-      propiedadId = resolvedPropiedadId;
-
-      const scoreInversion = calcularScoreInversion(
-        valoracion,
-        entorno,
-        propiedad.certificado_energetico
-      );
-
-      const valoracionId = await guardarValoracionEnBD(
-        propiedadId || "",
-        valoracion,
-        scoreInversion,
-        null
-      );
-
-      return NextResponse.json({
-        success: true,
-        valoracion_id: valoracionId,
-        propiedad_id: propiedadId,
-        ...valoracion,
-        entorno,
-        analisis_barrio: null,
-        score_inversion: scoreInversion,
-        coordenadas: null,
-      });
-    }
 
     // ── Flujo estándar completo para la Web ──────────────────────────────────
     if (!propiedadId) {
