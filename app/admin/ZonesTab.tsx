@@ -9,6 +9,12 @@ export interface AgenciaItem {
   telefono: string;
   email: string;
   estado: boolean;
+  persona_contacto?: string;
+  direccion?: string;
+  pais?: string;
+  idioma?: string;
+  acuerdo?: string;
+  notas?: string;
 }
 
 export interface ZonaItem {
