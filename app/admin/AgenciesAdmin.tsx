@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { pbClient } from "@/lib/pocketbase-client";
 import { T, type Lang } from "@/lib/translations";
 
@@ -21,15 +21,36 @@ interface Zona {
   };
 }
 
+interface CityBanner {
+  id: string;
+  location_name: string;
+  postal_codes: string[] | string;
+}
+
 interface AgenciesAdminProps {
   lang?: Lang;
+}
+
+function parsePostalCodes(raw: string[] | string | undefined): string[] {
+  if (Array.isArray(raw)) return raw.filter((c) => /^\d{5}$/.test(String(c).trim()));
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((c) => /^\d{5}$/.test(String(c).trim()));
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
   const [tab, setTab] = useState<"agencias" | "zonas">("agencias");
   const [agencias, setAgencias] = useState<Agencia[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
+  const [cities, setCities] = useState<CityBanner[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savingZones, setSavingZones] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
 
   // Form states - Agencia
@@ -37,8 +58,10 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
 
-  // Form states - Zona
-  const [cp, setCp] = useState("");
+  // Form states - Zona (Ciudad + CPs o Manual)
+  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [selectedCps, setSelectedCps] = useState<string[]>([]);
+  const [manualCp, setManualCp] = useState("");
   const [selectedAgencia, setSelectedAgencia] = useState("");
 
   const t = T(lang).admin.agencies;
@@ -46,15 +69,19 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const inmos = await pbClient.collection("inmobiliarias").getFullList<Agencia>({
-        sort: "nombre",
-      });
-      const zns = await pbClient.collection("zonas_inmobiliarias").getFullList<Zona>({
-        expand: "inmobiliaria_id",
-        sort: "codigo_postal",
-      });
+      const [inmos, zns, banners] = await Promise.all([
+        pbClient.collection("inmobiliarias").getFullList<Agencia>({ sort: "nombre" }),
+        pbClient.collection("zonas_inmobiliarias").getFullList<Zona>({
+          expand: "inmobiliaria_id",
+          sort: "codigo_postal",
+        }),
+        pbClient.collection("social_proof_banners").getFullList<CityBanner>({
+          sort: "location_name",
+        }),
+      ]);
       setAgencias(inmos);
       setZonas(zns);
+      setCities(banners);
     } catch (err) {
       console.error("Error al cargar inmobiliarias/zonas:", err);
     } finally {
@@ -65,6 +92,48 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const cityCpsMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const c of cities) {
+      const cps = parsePostalCodes(c.postal_codes);
+      if (cps.length > 0) {
+        map.set(c.location_name, cps);
+      }
+    }
+    return map;
+  }, [cities]);
+
+  const assignedCpMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const z of zonas) {
+      if (z.expand?.inmobiliaria_id?.nombre) {
+        map.set(z.codigo_postal, z.expand.inmobiliaria_id.nombre);
+      }
+    }
+    return map;
+  }, [zonas]);
+
+  const activeCityCps = useMemo(() => {
+    if (!selectedCity || selectedCity === "__manual__") return [];
+    return cityCpsMap.get(selectedCity) ?? [];
+  }, [selectedCity, cityCpsMap]);
+
+  function handleCityChange(cityName: string) {
+    setSelectedCity(cityName);
+    if (cityName && cityName !== "__manual__") {
+      const cps = cityCpsMap.get(cityName) ?? [];
+      setSelectedCps(cps);
+    } else {
+      setSelectedCps([]);
+    }
+  }
+
+  function toggleCp(cpCode: string) {
+    setSelectedCps((prev) =>
+      prev.includes(cpCode) ? prev.filter((c) => c !== cpCode) : [...prev, cpCode]
+    );
+  }
 
   async function handleAddAgencia(e: React.FormEvent) {
     e.preventDefault();
@@ -80,24 +149,51 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
       setTelefono("");
       setEmail("");
       fetchData();
-    } catch (err) {
+    } catch {
       alert(t.errorSave);
     }
   }
 
   async function handleAddZona(e: React.FormEvent) {
     e.preventDefault();
-    if (!cp.trim() || !selectedAgencia) return;
+    if (!selectedAgencia) return;
+
+    const cpsToAssign =
+      selectedCity === "__manual__" || !selectedCity
+        ? manualCp.trim() ? [manualCp.trim()] : []
+        : selectedCps;
+
+    if (cpsToAssign.length === 0) return;
+
+    setSavingZones(true);
     try {
-      await pbClient.collection("zonas_inmobiliarias").create({
-        codigo_postal: cp.trim(),
-        inmobiliaria_id: selectedAgencia,
-      });
-      setCp("");
+      const existingByCp = new Map(zonas.map((z) => [z.codigo_postal, z]));
+
+      for (const code of cpsToAssign) {
+        const existing = existingByCp.get(code);
+        if (existing) {
+          if (existing.inmobiliaria_id !== selectedAgencia) {
+            await pbClient.collection("zonas_inmobiliarias").update(existing.id, {
+              inmobiliaria_id: selectedAgencia,
+            });
+          }
+        } else {
+          await pbClient.collection("zonas_inmobiliarias").create({
+            codigo_postal: code,
+            inmobiliaria_id: selectedAgencia,
+          });
+        }
+      }
+
+      setManualCp("");
+      setSelectedCity("");
+      setSelectedCps([]);
       setSelectedAgencia("");
       fetchData();
-    } catch (err) {
+    } catch {
       alert(t.errorAssign);
+    } finally {
+      setSavingZones(false);
     }
   }
 
@@ -107,7 +203,7 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
         estado: !agencia.estado,
       });
       fetchData();
-    } catch (err) {
+    } catch {
       alert(t.errorToggle);
     }
   }
@@ -117,10 +213,16 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
     try {
       await pbClient.collection(collection).delete(id);
       fetchData();
-    } catch (err) {
+    } catch {
       alert(t.errorDelete);
     }
   }
+
+  const canSubmitZone =
+    Boolean(selectedAgencia) &&
+    (selectedCity === "__manual__" || !selectedCity
+      ? /^\d{5}$/.test(manualCp.trim())
+      : selectedCps.length > 0);
 
   return (
     <section className="bg-slate-900 border border-white/10 rounded-2xl p-5">
@@ -157,16 +259,13 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
 
       {!collapsed && (
         <div className="mt-6 space-y-6">
-          <p className="text-slate-500 text-xs">
-            {t.info}
-          </p>
+          <p className="text-slate-500 text-xs">{t.info}</p>
 
           {loading && <div className="text-slate-400 text-xs mb-4">Cargando datos...</div>}
 
           {/* Tab Directorio Agencias */}
           {tab === "agencias" && (
             <div className="grid lg:grid-cols-12 gap-6">
-              {/* Formulario */}
               <form onSubmit={handleAddAgencia} className="lg:col-span-4 bg-slate-950/40 p-4 border border-white/5 rounded-xl space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">{t.addAgency}</h3>
                 <div>
@@ -184,7 +283,6 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
                 <button type="submit" className="w-full py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold rounded-lg transition-colors">{t.saveAgency}</button>
               </form>
 
-              {/* Tabla de Agencias */}
               <div className="lg:col-span-8 overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead>
@@ -225,13 +323,99 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
           {/* Tab Asignación de Zonas */}
           {tab === "zonas" && (
             <div className="grid lg:grid-cols-12 gap-6">
-              {/* Formulario */}
-              <form onSubmit={handleAddZona} className="lg:col-span-4 bg-slate-950/40 p-4 border border-white/5 rounded-xl space-y-4">
+              <form onSubmit={handleAddZona} className="lg:col-span-5 bg-slate-950/40 p-4 border border-white/5 rounded-xl space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">{t.addZone}</h3>
+
+                {/* Selector de Ciudad */}
                 <div>
-                  <label className="block text-[11px] text-slate-500 mb-1">{t.cpLabel}</label>
-                  <input type="text" value={cp} onChange={e => setCp(e.target.value)} required placeholder={t.cpPlaceholder} maxLength={5} className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400" />
+                  <label className="block text-[11px] text-slate-500 mb-1">Ciudad / Municipio</label>
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400"
+                  >
+                    <option value="">Selecciona una ciudad o CP manual...</option>
+                    {Array.from(cityCpsMap.keys()).map((cityName) => (
+                      <option key={cityName} value={cityName}>
+                        {cityName} ({cityCpsMap.get(cityName)?.length} CPs)
+                      </option>
+                    ))}
+                    <option value="__manual__">✍️ Introducir un CP manual (5 dígitos)</option>
+                  </select>
                 </div>
+
+                {/* CPs de la ciudad seleccionada */}
+                {activeCityCps.length > 0 && (
+                  <div className="bg-slate-900/70 border border-white/10 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-medium">
+                        CPs de {selectedCity} ({selectedCps.length}/{activeCityCps.length})
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCps(activeCityCps)}
+                          className="text-blue-400 hover:text-blue-300 font-semibold"
+                        >
+                          Todos
+                        </button>
+                        <span className="text-slate-600">·</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCps([])}
+                          className="text-slate-400 hover:text-white"
+                        >
+                          Ninguno
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pt-1">
+                      {activeCityCps.map((code) => {
+                        const checked = selectedCps.includes(code);
+                        const existingOwner = assignedCpMap.get(code);
+                        return (
+                          <button
+                            key={code}
+                            type="button"
+                            onClick={() => toggleCp(code)}
+                            title={existingOwner ? `Actualmente en: ${existingOwner}` : "Libre"}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all flex items-center gap-1 ${
+                              checked
+                                ? "bg-blue-500/20 border-blue-400/50 text-blue-200"
+                                : "bg-slate-800/70 border-white/10 text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <span>{checked ? "☑" : "☐"}</span>
+                            <span>{code}</span>
+                            {existingOwner && <span className="text-[9px] text-amber-400">●</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {activeCityCps.some((c) => assignedCpMap.has(c)) && (
+                      <p className="text-[10px] text-amber-400/80">
+                        ● Indica que ese CP ya tiene inmobiliaria (si lo marcas, se reasignará a la nueva).
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Input manual si elige manual o no hay ciudad */}
+                {(selectedCity === "__manual__" || !selectedCity) && (
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">{t.cpLabel}</label>
+                    <input
+                      type="text"
+                      value={manualCp}
+                      onChange={e => setManualCp(e.target.value)}
+                      placeholder={t.cpPlaceholder}
+                      maxLength={5}
+                      className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1">{t.assignedAgencyLabel}</label>
                   <select value={selectedAgencia} onChange={e => setSelectedAgencia(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400">
@@ -241,13 +425,23 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
                     ))}
                   </select>
                 </div>
-                <button type="submit" className="w-full py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold rounded-lg transition-colors">{t.assignZoneBtn}</button>
+
+                <button
+                  type="submit"
+                  disabled={!canSubmitZone || savingZones}
+                  className="w-full py-2.5 bg-blue-500 hover:bg-blue-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-colors"
+                >
+                  {savingZones
+                    ? "Asignando zonas..."
+                    : activeCityCps.length > 0
+                      ? `Asignar ${selectedCps.length} CP${selectedCps.length === 1 ? "" : "s"} de ${selectedCity}`
+                      : t.assignZoneBtn}
+                </button>
               </form>
 
-              {/* Tabla de Zonas */}
-              <div className="lg:col-span-8 overflow-x-auto">
+              <div className="lg:col-span-7 overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full text-left text-xs text-slate-300">
-                  <thead>
+                  <thead className="sticky top-0 bg-slate-900">
                     <tr className="border-b border-white/10 text-slate-500 uppercase tracking-wider font-semibold text-[10px]">
                       <th className="py-2">{t.tblCp}</th>
                       <th>{t.tblRelatedAgency}</th>
