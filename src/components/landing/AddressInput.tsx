@@ -21,7 +21,7 @@ interface AddressInputProps {
   onChange:    (v: string) => void;
 }
 
-// ─── Subcomponente: icono casa ────────────────────────────────────────────────
+// ─── Subcomponentes: iconos ───────────────────────────────────────────────────
 
 function IconHome() {
   return (
@@ -34,11 +34,21 @@ function IconHome() {
   );
 }
 
+function IconLocate() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+      <circle cx="12" cy="12" r="7" />
+    </svg>
+  );
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatSuggestion(displayName: string): string {
-  // Nominatim devuelve: "Calle X, 28, Ciudad, Provincia, CC.AA., España"
-  // Queremos: "Calle X, 28, Ciudad"
   const parts = displayName.split(",").map((p) => p.trim());
   const stopWords = [
     'España', 'Spain', 'Espanya', 'Catalunya', 'Cataluña', 'Andalucía', 'Madrid',
@@ -52,17 +62,29 @@ function formatSuggestion(displayName: string): string {
   return filtered.slice(0, 3).join(", ");
 }
 
+function buildReverseAddress(data: any): string {
+  const a = data?.address;
+  if (!a) return data?.display_name ? formatSuggestion(data.display_name) : "";
+  const road = a.road || a.pedestrian || a.residential || a.suburb || "";
+  const num  = a.house_number ? ` ${a.house_number}` : "";
+  const city = a.city || a.town || a.village || a.municipality || "";
+  const cp   = a.postcode || "";
+  const segments = [`${road}${num}`.trim(), city, cp].filter(Boolean);
+  return segments.length >= 2 ? segments.join(", ") : formatSuggestion(data?.display_name || "");
+}
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function AddressInput({ value, placeholder, onChange }: AddressInputProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open,        setOpen]        = useState(false);
   const [searching,   setSearching]   = useState(false);
+  const [locating,    setLocating]    = useState(false);
+  const [geoError,    setGeoError]    = useState<string | null>(null);
   const [coords,      setCoords]      = useState<Coords | null>(null);
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef  = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -76,6 +98,7 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
   function handleChange(text: string) {
     onChange(text);
     setCoords(null);
+    setGeoError(null);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -102,6 +125,45 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
     setCoords({ lat: parseFloat(s.lat), lng: parseFloat(s.lon) });
     setSuggestions([]);
     setOpen(false);
+    setGeoError(null);
+  }
+
+  function handleLocateMe() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoError("Tu navegador no soporta geolocalización.");
+      return;
+    }
+    setLocating(true);
+    setGeoError(null);
+    setOpen(false);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+          const res = await fetch(url, { headers: { "User-Agent": "CalculaTuCasa/1.0" } });
+          if (!res.ok) throw new Error("Error obteniendo calle");
+          const data = await res.json();
+          const detected = buildReverseAddress(data);
+          if (detected) {
+            onChange(detected);
+            setCoords({ lat: latitude, lng: longitude });
+          } else {
+            setGeoError("No se pudo detectar la calle exacta. Escríbela manualmente.");
+          }
+        } catch {
+          setGeoError("No pudimos obtener la dirección desde tu GPS.");
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocating(false);
+        setGeoError("Activa el permiso de ubicación en tu navegador o escribe la calle.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   }
 
   return (
@@ -117,18 +179,32 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full pl-12 pr-10 py-4 bg-transparent text-white placeholder-slate-500 text-lg outline-none"
+          className="w-full pl-12 pr-14 py-4 bg-transparent text-white placeholder-slate-500 text-lg outline-none"
           aria-label="Dirección de la propiedad"
           aria-autocomplete="list"
           aria-expanded={open}
         />
 
-        {/* Spinner */}
-        {searching && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="w-4 h-4 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin" />
-          </div>
-        )}
+        {/* Botón GPS (derecha) o Spinner de búsqueda */}
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
+          {searching && (
+            <div className="w-4 h-4 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin mr-1" />
+          )}
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            disabled={locating}
+            title="Detectar mi dirección actual con GPS"
+            aria-label="Detectar mi dirección actual con GPS"
+            className="p-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-400 hover:text-emerald-300 transition-all active:scale-95 cursor-pointer"
+          >
+            {locating ? (
+              <div className="w-5 h-5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+            ) : (
+              <IconLocate />
+            )}
+          </button>
+        </div>
 
         {/* Suggestions dropdown */}
         {open && suggestions.length > 0 && (
@@ -152,7 +228,11 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
         )}
       </div>
 
-      {/* Map preview — shown only after a suggestion is selected */}
+      {geoError && (
+        <p className="text-xs text-amber-300/90 text-left pl-3 pt-1.5">{geoError}</p>
+      )}
+
+      {/* Map preview — shown after a suggestion is selected or GPS located */}
       {coords && (
         <div className="h-52 rounded-2xl overflow-hidden border border-white/10 mt-3">
           <MapPreview lat={coords.lat} lng={coords.lng} address={value} />
