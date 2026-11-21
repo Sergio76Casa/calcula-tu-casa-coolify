@@ -34,3 +34,7 @@ next-env.d.ts
 
 # scratch directory
 /scratch
+
+# credenciales locales del servidor y documentos privados de estrategia (no subir a GitHub público)
+CREDENCIALES_SERVIDOR.md
+/Estrategias lanzamiento

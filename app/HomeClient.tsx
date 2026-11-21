@@ -43,6 +43,7 @@ function HomeInner({ variant }: { variant: Variant }) {
   const utmName       = searchParams.get("utm_name")     ?? "";
 
   useEffect(() => { setLang(detectLang()); }, []);
+  useEffect(() => { window.scrollTo(0, 0); }, [step]);
 
   function reset() { 
     setStep(1); 

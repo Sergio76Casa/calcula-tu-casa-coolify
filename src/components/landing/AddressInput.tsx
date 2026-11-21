@@ -117,7 +117,6 @@ export default function AddressInput({ value, placeholder, onChange }: AddressIn
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
           autoComplete="off"
-          autoFocus
           className="w-full pl-12 pr-10 py-4 bg-transparent text-white placeholder-slate-500 text-lg outline-none"
           aria-label="Dirección de la propiedad"
           aria-autocomplete="list"

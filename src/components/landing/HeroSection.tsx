@@ -55,17 +55,17 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
   }
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950">
+    <section className="relative min-h-screen flex items-start md:items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950">
 
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute top-1/4 left-1/4  w-96 h-96 bg-blue-600   rounded-full opacity-20 blur-3xl" />
         <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-indigo-500 rounded-full opacity-20 blur-3xl" />
       </div>
 
-      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 py-24 text-center">
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 pt-14 pb-12 md:py-24 text-center">
 
         {/* Indicador live — stats en tiempo real */}
-        <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-8">
+        <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 rounded-full px-4 py-1.5 mb-6 md:mb-8">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           {todayCount !== null ? (
             <span className="text-blue-200 text-sm font-medium tracking-wide">
@@ -77,7 +77,7 @@ export default function HeroSection({ lang, variant, onNext }: HeroSectionProps)
         </div>
 
         {/* Titular */}
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] mb-6">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] mb-5 md:mb-6">
           {title1}
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
