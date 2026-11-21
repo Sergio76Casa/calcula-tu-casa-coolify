@@ -8,8 +8,9 @@ interface AdminMapProps {
   lang?: Lang;
 }
 
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const ICON_CDN   = "https://unpkg.com/leaflet@1.9.4/dist/images/";
+const OSM_TILES   = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const ICON_CDN    = "https://unpkg.com/leaflet@1.9.4/dist/images/";
 
 async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
   const key = `vx_geo:${address}`;
@@ -52,7 +53,7 @@ export default function AdminMap({ pins, lang = "es" }: AdminMapProps) {
       });
 
       const map = L.map(container, { scrollWheelZoom: true, attributionControl: false });
-      L.tileLayer(DARK_TILES, { maxZoom: 18 }).addTo(map);
+      L.tileLayer(OSM_TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(map);
       L.control.attribution({ prefix: false, position: "bottomright" }).addTo(map);
       map.setView([40.416775, -3.703790], 6); // Spain
       mapRef.current = map;

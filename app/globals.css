@@ -4,3 +4,11 @@
 
 /* Leaflet map styles */
 @import "leaflet/dist/leaflet.css";
+
+.leaflet-container {
+  background: #0f172a;
+}
+
+.leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}

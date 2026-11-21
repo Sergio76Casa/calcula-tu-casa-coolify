@@ -10,9 +10,9 @@ interface MapPreviewProps {
   address: string;
 }
 
-// CDN tiles for dark themed map (CartoDB Dark Matter)
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com">CARTO</a>';
+// OpenStreetMap standard tiles (styled in dark mode via globals.css)
+const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 const ICON_CDN = "https://unpkg.com/leaflet@1.9.4/dist/images/";
 
@@ -53,7 +53,7 @@ export default function MapPreview({ lat, lng, address }: MapPreviewProps) {
         attributionControl: false,
       });
 
-      L.tileLayer(DARK_TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(map);
+      L.tileLayer(OSM_TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(map);
       L.control.attribution({ prefix: false, position: "bottomright" }).addTo(map);
 
       map.setView([lat, lng], 16);
