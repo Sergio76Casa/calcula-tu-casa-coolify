@@ -10,6 +10,26 @@ import { valuationSchema, barrioSchema, entornoFallbackSchema } from "./schemas"
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
+export function extractJsonObject(raw: string): string {
+  const trimmed = raw.trim();
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+  return trimmed;
+}
+
+function extractGeminiText(payload: any): string {
+  const parts: any[] = payload?.candidates?.[0]?.content?.parts ?? [];
+  for (const part of parts) {
+    if (typeof part?.text === "string" && !part?.thought && part.text.includes("{")) {
+      return part.text;
+    }
+  }
+  return parts[0]?.text ?? "";
+}
+
 // Versión ultrarrápida para ManyChat: sin thinking, tokens reducidos
 export async function callGeminiManyChat(
   prompt: string,
@@ -25,10 +45,10 @@ export async function callGeminiManyChat(
         responseMimeType: "application/json",
         maxOutputTokens: 2000,
         responseSchema: valuationSchema,
-        thinkingConfig: { thinkingBudget: 0 }, // desactiva el thinking → mucho más rápido
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
-    signal: AbortSignal.timeout(9000), // timeout estricto de 9s para ManyChat
+    signal: AbortSignal.timeout(9000),
   });
 
   if (!res.ok) {
@@ -37,18 +57,17 @@ export async function callGeminiManyChat(
   }
 
   const payload = await res.json();
-  const raw: string = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const raw = extractGeminiText(payload);
   if (!raw) throw new Error("Gemini ManyChat devolvió respuesta vacía");
 
   let parsed: ValoracionGemini;
   try {
-    parsed = JSON.parse(raw) as ValoracionGemini;
+    parsed = JSON.parse(extractJsonObject(raw)) as ValoracionGemini;
   } catch (parseErr: unknown) {
     const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
     throw new Error(`Gemini ManyChat JSON Parse Error: ${msg}`);
   }
 
-  // Validar campos mínimos requeridos
   if (
     typeof parsed.precio_sugerido !== "number" ||
     typeof parsed.rango_precios?.minimo !== "number" ||
@@ -70,7 +89,6 @@ export async function callGeminiManyChat(
   return parsed;
 }
 
-
 export async function callGemini(
   prompt: string,
   apiKey: string
@@ -83,11 +101,12 @@ export async function callGemini(
       generationConfig: {
         temperature: 0.2,
         responseMimeType: "application/json",
-        maxOutputTokens: 8000,
+        maxOutputTokens: 3000,
         responseSchema: valuationSchema,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(25000),
   });
 
   if (!res.ok) {
@@ -96,13 +115,13 @@ export async function callGemini(
   }
 
   const payload = await res.json();
-  const raw: string = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const raw = extractGeminiText(payload);
 
   if (!raw) throw new Error("Gemini devolvió una respuesta vacía");
 
   let parsed: ValoracionGemini;
   try {
-    parsed = JSON.parse(raw) as ValoracionGemini;
+    parsed = JSON.parse(extractJsonObject(raw)) as ValoracionGemini;
   } catch (parseErr: unknown) {
     const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
     console.error(
@@ -114,7 +133,6 @@ export async function callGemini(
     throw new Error(`Gemini JSON Parse Error: ${msg}. Raw output: [${raw}].`);
   }
 
-  // Validate required fields
   if (
     typeof parsed.precio_sugerido !== "number" ||
     typeof parsed.rango_precios?.minimo !== "number" ||
@@ -157,20 +175,21 @@ export async function callGeminiBarrio(
         generationConfig: {
           temperature: 0.3,
           responseMimeType: "application/json",
-          maxOutputTokens: 4000,
+          maxOutputTokens: 2000,
           responseSchema: barrioSchema,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(12000),
     });
 
     if (!res.ok) return null;
 
     const payload = await res.json();
-    const raw: string = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const raw = extractGeminiText(payload);
     if (!raw) return null;
 
-    return JSON.parse(raw) as AnalisisBarrio;
+    return JSON.parse(extractJsonObject(raw)) as AnalisisBarrio;
   } catch (err) {
     console.error("[GeminiClient] Gemini barrio error:", err);
     return null;
@@ -194,6 +213,7 @@ export async function callGeminiEntornoFallback(
           responseMimeType: "application/json",
           maxOutputTokens: 2000,
           responseSchema: entornoFallbackSchema,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
       signal: AbortSignal.timeout(10000),
@@ -201,9 +221,9 @@ export async function callGeminiEntornoFallback(
 
     if (!res.ok) return null;
     const payload = await res.json();
-    const raw = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const raw = extractGeminiText(payload);
     if (!raw) return null;
-    return JSON.parse(raw) as EntornoData;
+    return JSON.parse(extractJsonObject(raw)) as EntornoData;
   } catch (err) {
     console.error("[GeminiClient] Gemini Entorno Fallback error:", err);
     return null;

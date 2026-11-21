@@ -1,3 +1,5 @@
+import { extractJsonObject } from "./geminiClients";
+
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
@@ -24,7 +26,7 @@ Responde SOLO con el JSON.`;
         generationConfig: {
           temperature: 0.1,
           responseMimeType: "application/json",
-          maxOutputTokens: 200,
+          maxOutputTokens: 500,
           responseSchema: {
             type: "OBJECT",
             properties: {
@@ -33,6 +35,7 @@ Responde SOLO con el JSON.`;
             },
             required: ["lat", "lon"],
           },
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
       signal: AbortSignal.timeout(6000),
@@ -42,7 +45,7 @@ Responde SOLO con el JSON.`;
     const payload = await res.json();
     const raw = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(extractJsonObject(raw));
     if (typeof parsed.lat === "number" && typeof parsed.lon === "number") {
       return { lat: parsed.lat, lon: parsed.lon };
     }
@@ -56,30 +59,37 @@ Responde SOLO con el JSON.`;
 export async function nominatimGeocoding(
   direccion: string
 ): Promise<{ lat: number; lon: number; display_name?: string } | null> {
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(direccion)}&format=json&limit=1&addressdetails=1&countrycodes=es`;
-    const geoRes = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "CalculaTuCasa-Tasador/1.2 (tasaciones@calculatucasa.com)",
-      },
-      signal: AbortSignal.timeout(4000),
-    });
-    if (geoRes.ok) {
-      const data = await geoRes.json();
-      if (data && data[0] && data[0].lat && data[0].lon) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lon: parseFloat(data[0].lon),
-          display_name: data[0].display_name || undefined,
-        };
-      }
-    }
-    return null;
-  } catch (err) {
-    console.error("[Geocoding] Nominatim geocoding error:", err);
-    return null;
+  const queries = [direccion];
+  const withoutNumber = direccion.replace(/\b\d+\b/, "").replace(/\s+,/g, ",").trim();
+  if (withoutNumber && withoutNumber !== direccion) {
+    queries.push(withoutNumber);
   }
+
+  for (const q of queries) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1&countrycodes=es`;
+      const geoRes = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "CalculaTuCasa-Tasador/1.2 (tasaciones@calculatucasa.com)",
+        },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (geoRes.ok) {
+        const data = await geoRes.json();
+        if (data && data[0] && data[0].lat && data[0].lon) {
+          return {
+            lat: parseFloat(data[0].lat),
+            lon: parseFloat(data[0].lon),
+            display_name: q === direccion ? data[0].display_name || undefined : direccion,
+          };
+        }
+      }
+    } catch (err) {
+      console.error("[Geocoding] Nominatim geocoding error:", err);
+    }
+  }
+  return null;
 }
 
 export async function obtenerCoordenadas(

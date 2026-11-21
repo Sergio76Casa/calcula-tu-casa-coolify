@@ -124,9 +124,13 @@ export async function fetchEntorno(
       console.log(`[Entorno] Intentando consultar Overpass en: ${url}`);
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "CalculaTuCasa-Tasador/1.2 (https://calculatucasa.com; tasaciones@calculatucasa.com)",
+          "Accept": "application/json",
+        },
         body: `data=${encodeURIComponent(query)}`,
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(3000),
       });
 
       if (!res.ok) {

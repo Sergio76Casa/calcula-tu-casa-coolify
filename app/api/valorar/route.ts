@@ -159,7 +159,10 @@ export async function POST(req: Request) {
       salud: [],
     };
 
-    // ── Flujo estándar completo para la Web ──────────────────────────────────
+    // ── Flujo estándar completo para la Web (Valoración IA y Entorno en paralelo) ──
+    const promptVal = buildPrompt(propiedad, testigos, lang);
+    const valoracionPromise = callGemini(promptVal, GEMINI_API_KEY);
+
     if (!propiedadId) {
       const geoResult = await obtenerCoordenadas(
         propiedad.direccion_completa,
@@ -188,20 +191,16 @@ export async function POST(req: Request) {
           console.log("[Entorno] Fallback de entorno con Gemini cargado con éxito.");
         }
       }
-
-      propiedadId = await guardarPropiedadEnBD(
-        propiedad,
-        enrichedAddress,
-        entorno
-      );
     }
 
-    // ── Valoración Gemini principal y Análisis Barrio en paralelo ───────────
-    const promptVal = buildPrompt(propiedad, testigos, lang);
-    const [valoracion, analisisBarrio] = await Promise.all([
-      callGemini(promptVal, GEMINI_API_KEY),
+    const [valoracion, analisisBarrio, savedPropId] = await Promise.all([
+      valoracionPromise,
       callGeminiBarrio(enrichedAddress, entorno, GEMINI_API_KEY),
+      propiedadId
+        ? Promise.resolve(propiedadId)
+        : guardarPropiedadEnBD(propiedad, enrichedAddress, entorno),
     ]);
+    propiedadId = savedPropId;
 
     // ── Score inversión ──────────────────────────────────────────────────────
     const scoreInversion = calcularScoreInversion(
