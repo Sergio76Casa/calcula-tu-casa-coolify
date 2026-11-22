@@ -68,8 +68,36 @@ function buildAgencyWaLink(l: LeadRow): string | null {
     cleanPhone = `34${cleanPhone}`;
   }
   const contactPhone = l.telefono_final || l.telefono;
-  const text = `Hola ${l.assigned_agency || ""}, tenemos un nuevo propietario en tu zona.\n\nDetalles:\n- Propietario: ${l.nombre} (${contactPhone})\n- Dirección: ${l.direccion || "—"}\n- Valoración IA: ${l.precio ? l.precio.toLocaleString("es-ES") + " €" : "—"}`;
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  const p = l.raw_propiedad || {};
+  const cert = l.certificado_energetico
+    ? l.certificado_energetico === "pending"
+      ? "Pendiente"
+      : l.certificado_energetico.toUpperCase()
+    : "No indicado";
+
+  const lines = [
+    `Hola ${l.assigned_agency || ""}, tenemos un nuevo propietario interesado en tu zona.`,
+    ``,
+    `👤 *Datos del Propietario:*`,
+    `- Nombre: ${l.nombre}`,
+    `- Teléfono: ${contactPhone}`,
+    l.email ? `- Email: ${l.email}` : null,
+    l.venta_urgencia || l.utm_campaign ? `- Urgencia/Intención: ${l.venta_urgencia || l.utm_campaign}` : null,
+    l.venta_estado ? `- Situación venta: ${l.venta_estado}` : null,
+    ``,
+    `🏠 *Datos de la Vivienda:*`,
+    `- Dirección: ${l.direccion || "—"}`,
+    `- Tipo: ${p.tipo || "Vivienda"}`,
+    `- Superficie: ${p.m2 ? `${p.m2} m²` : "—"}`,
+    `- Habitaciones: ${p.habitaciones ?? "No indicado"}`,
+    `- Estado: ${p.estado || "—"}`,
+    `- Ascensor: ${p.ascensor === true ? "Sí" : p.ascensor === false ? "No" : "No indicado"}`,
+    `- Jardín/Terraza: ${p.jardin === true ? "Sí" : p.jardin === false ? "No" : "No indicado"}`,
+    `- Cert. Energético: ${cert}`,
+    `- Valoración estimada IA: ${l.precio ? l.precio.toLocaleString("es-ES") + " €" : "—"}`,
+  ].filter((line) => line !== null);
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
 
 function exportCSV(rows: LeadRow[], lang: Lang) {

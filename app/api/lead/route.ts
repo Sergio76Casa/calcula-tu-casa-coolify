@@ -95,6 +95,14 @@ async function handleRoutingAndNotification(
     if (props.length === 0) return;
     const propiedad = props[0];
 
+    let valoracion: any = null;
+    try {
+      const vals = await pbList("valoraciones", `propiedad_id = '${propiedadId}'`);
+      if (vals.length > 0) valoracion = vals[vals.length - 1];
+    } catch {
+      // silencioso
+    }
+
     const cp = await extractOrLookupPostalCode(propiedad.direccion_completa);
 
     let agency: any = null;
@@ -130,11 +138,27 @@ async function handleRoutingAndNotification(
       if (lead.email) leadDetails += `• *Email:* ${lead.email}\n`;
     }
 
+    const tipoLabel = propiedad.tipo_propiedad || "Vivienda";
+    const habLabel = propiedad.habitaciones ? `${propiedad.habitaciones} hab.` : "No indicado";
+    const ascLabel = propiedad.ascensor === true ? "Sí" : propiedad.ascensor === false ? "No" : "No indicado";
+    const jarLabel = propiedad.jardin === true ? "Sí" : propiedad.jardin === false ? "No" : "No indicado";
+    const certLabel = propiedad.certificado_energetico
+      ? propiedad.certificado_energetico === "pending"
+        ? "Pendiente"
+        : propiedad.certificado_energetico.toUpperCase()
+      : "No indicado";
+    const precioLabel = valoracion?.precio_sugerido
+      ? `${Number(valoracion.precio_sugerido).toLocaleString("es-ES")} €`
+      : "No disponible";
+
     leadDetails += `\n📍 *Propiedad:*\n`;
     leadDetails += `• *Dirección:* ${propiedad.direccion_completa}\n`;
     leadDetails += `• *Código Postal:* ${cp || "No detectado"}\n`;
-    leadDetails += `• *Superficie:* ${propiedad.m2_construidos} m²\n`;
-    leadDetails += `• *Conservación:* ${propiedad.estado_conservacion}\n`;
+    leadDetails += `• *Tipo:* ${tipoLabel} | *Superficie:* ${propiedad.m2_construidos} m²\n`;
+    leadDetails += `• *Habitaciones:* ${habLabel} | *Estado:* ${propiedad.estado_conservacion}\n`;
+    leadDetails += `• *Ascensor:* ${ascLabel} | *Jardín/Terraza:* ${jarLabel}\n`;
+    leadDetails += `• *Cert. Energético:* ${certLabel}\n`;
+    leadDetails += `• *Valoración IA:* ${precioLabel}\n`;
     if (lead.utm_source || lead.utm_campaign) {
       leadDetails += `\n📣 *Campaña:* ${lead.utm_source || "directo"}${lead.utm_campaign ? ` · \`${lead.utm_campaign}\`` : ""}\n`;
     }
@@ -146,7 +170,29 @@ async function handleRoutingAndNotification(
       return;
     }
 
-    const waText = `Hola ${agency.nombre}, tenemos un nuevo propietario en tu zona (${cp}).\n\nDetalles:\n- Propietario: ${lead.nombre} (${contactPhone})\n- Dirección: ${propiedad.direccion_completa}\n- Superficie: ${propiedad.m2_construidos} m²`;
+    const waLines = [
+      `Hola ${agency.nombre}, tenemos un nuevo propietario interesado en tu zona (${cp}).`,
+      ``,
+      `👤 *Datos del Propietario:*`,
+      `- Nombre: ${lead.nombre}`,
+      `- Teléfono: ${contactPhone}`,
+      lead.email ? `- Email: ${lead.email}` : null,
+      urgencia || lead.utm_campaign ? `- Urgencia/Intención: ${urgencia || lead.utm_campaign}` : null,
+      estadoVenta ? `- Situación venta: ${estadoVenta}` : null,
+      ``,
+      `🏠 *Datos de la Vivienda:*`,
+      `- Dirección: ${propiedad.direccion_completa}`,
+      `- Tipo: ${tipoLabel}`,
+      `- Superficie: ${propiedad.m2_construidos} m²`,
+      `- Habitaciones: ${habLabel}`,
+      `- Estado: ${propiedad.estado_conservacion}`,
+      `- Ascensor: ${ascLabel}`,
+      `- Jardín/Terraza: ${jarLabel}`,
+      `- Cert. Energético: ${certLabel}`,
+      `- Valoración estimada IA: ${precioLabel}`,
+    ].filter((line) => line !== null);
+
+    const waText = waLines.join("\n");
     const waLink = `https://wa.me/${cleanPhone(agency.telefono)}?text=${encodeURIComponent(waText)}`;
 
     // Modo Automático y la agencia tiene Telegram Chat ID configurado
@@ -156,9 +202,15 @@ async function handleRoutingAndNotification(
         `👤 *Nombre:* ${lead.nombre}\n` +
         `📞 *Teléfono:* ${contactPhone}\n` +
         (lead.email ? `✉️ *Email:* ${lead.email}\n` : "") +
-        `📍 *Dirección:* ${propiedad.direccion_completa}\n` +
-        `📐 *Superficie:* ${propiedad.m2_construidos} m² (${propiedad.estado_conservacion})` +
-        (isHotLead ? `\n🔥 *Urgencia:* ${urgencia || "Alta"}` : ""),
+        `\n📋 *Ficha del Inmueble:*\n` +
+        `• *Dirección:* ${propiedad.direccion_completa}\n` +
+        `• *Tipo:* ${tipoLabel} | *Superficie:* ${propiedad.m2_construidos} m²\n` +
+        `• *Habitaciones:* ${habLabel} | *Estado:* ${propiedad.estado_conservacion}\n` +
+        `• *Ascensor:* ${ascLabel} | *Jardín/Terraza:* ${jarLabel}\n` +
+        `• *Cert. Energético:* ${certLabel}\n` +
+        `• *Valoración IA:* ${precioLabel}` +
+        (isHotLead || lead.utm_campaign ? `\n🔥 *Urgencia:* ${urgencia || lead.utm_campaign}` : "") +
+        (estadoVenta ? `\n📌 *Situación:* ${estadoVenta}` : ""),
         agency.telegram_chat_id.trim()
       );
 
