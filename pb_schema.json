@@ -173,7 +173,7 @@
         "id": "f_email",
         "name": "email",
         "type": "email",
-        "required": true,
+        "required": false,
         "presentable": false,
         "unique": false,
         "options": {

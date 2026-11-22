@@ -10,6 +10,7 @@ import LeadsTable,  { type LeadRow }  from "./LeadsTable";
 import BannersAdmin from "./BannersAdmin";
 import NamesAdmin from "./NamesAdmin";
 import AgenciesAdmin from "./AgenciesAdmin";
+import ProspectsAdmin from "./ProspectsAdmin";
 import { T, type Lang } from "@/lib/translations";
 
 const AdminMap = dynamic(() => import("./AdminMap"), { ssr: false });
@@ -263,6 +264,9 @@ export default function AdminDashboard() {
 
         {/* Agencies Administration */}
         <AgenciesAdmin lang={lang} />
+
+        {/* Agency Prospecting B2B */}
+        <ProspectsAdmin />
 
         {/* Map */}
         {mapPins.length > 0 && (

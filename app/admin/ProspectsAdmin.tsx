@@ -1,0 +1,615 @@
+"use client";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { pbClient } from "@/lib/pocketbase-client";
+
+export interface ProspectItem {
+  id: string;
+  nombre_agencia: string;
+  persona_contacto?: string;
+  telefono?: string;
+  email?: string;
+  web?: string;
+  ciudad?: string;
+  codigo_postal?: string;
+  origen?: string;
+  estado?: "pendiente" | "contactada" | "prueba_enviada" | "cliente" | "descartada";
+  notas?: string;
+  created: string;
+}
+
+type TemplateKey = "trojan" | "cold" | "followup";
+
+const STATUS_META: Record<
+  NonNullable<ProspectItem["estado"]>,
+  { label: string; cls: string }
+> = {
+  pendiente: {
+    label: "Pendiente",
+    cls: "bg-slate-800 text-slate-300 border-white/10",
+  },
+  contactada: {
+    label: "Contactada",
+    cls: "bg-blue-500/15 text-blue-300 border-blue-400/30",
+  },
+  prueba_enviada: {
+    label: "Prueba enviada",
+    cls: "bg-amber-500/15 text-amber-300 border-amber-400/30",
+  },
+  cliente: {
+    label: "Cliente activo",
+    cls: "bg-emerald-500/15 text-emerald-300 border-emerald-400/30",
+  },
+  descartada: {
+    label: "Descartada",
+    cls: "bg-red-500/10 text-red-400 border-red-400/20",
+  },
+};
+
+function cleanWaPhone(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, "");
+  if (digits.length === 9 && /^[6789]/.test(digits)) {
+    return `34${digits}`;
+  }
+  return digits;
+}
+
+function buildMessage(template: TemplateKey, p: ProspectItem): { subject: string; body: string } {
+  const nombre = p.persona_contacto || p.nombre_agencia;
+  const zona = [p.codigo_postal, p.ciudad].filter(Boolean).join(" ") || "tu zona";
+
+  if (template === "trojan") {
+    return {
+      subject: `Propietario interesado en vender en ${zona}`,
+      body:
+        `Hola ${nombre}, te escribo desde CalculaTuCasa.com.\n\n` +
+        `Tenemos un propietario en ${zona} que acaba de valorar su vivienda y ha indicado intención de vender en 1-3 meses.\n\n` +
+        `¿Os interesa que os pase su ficha completa (teléfono, dirección, m² y valoración) gratis como prueba para que comprobéis cómo trabajamos?`,
+    };
+  }
+  if (template === "followup") {
+    return {
+      subject: `Última plaza exclusiva para ${zona}`,
+      body:
+        `Hola ${nombre}, esta semana cerramos la exclusividad de leads de propietarios para ${zona} en CalculaTuCasa.com.\n\n` +
+        `Si queréis recibir un lead de prueba sin compromiso antes de asignarlo a otra inmobiliaria de la zona, podéis verlo aquí: https://calculatucasa.com/inmobiliarias`,
+    };
+  }
+  return {
+    subject: `Propietarios que quieren vender en ${zona}`,
+    body:
+      `Hola ${nombre}, soy de CalculaTuCasa.com.\n\n` +
+      `Captamos propietarios en ${zona} que tasan su vivienda con IA y filtramos su urgencia de venta. Trabajamos en exclusiva por código postal y entregamos la ficha al instante por Telegram o WhatsApp.\n\n` +
+      `Aquí puedes ver un ejemplo y pedir 1 lead de prueba gratis: https://calculatucasa.com/inmobiliarias`,
+  };
+}
+
+export default function ProspectsAdmin() {
+  const [collapsed, setCollapsed] = useState(true);
+  const [prospects, setProspects] = useState<ProspectItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [template, setTemplate] = useState<TemplateKey>("trojan");
+
+  // Form manual / lote
+  const [showAdd, setShowAdd] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [nombreAgencia, setNombreAgencia] = useState("");
+  const [personaContacto, setPersonaContacto] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
+  const [web, setWeb] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [codigoPostal, setCodigoPostal] = useState("");
+  const [notas, setNotas] = useState("");
+
+  const fetchProspects = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await pbClient
+        .collection("prospectos_inmobiliarias")
+        .getFullList<ProspectItem>({ sort: "-created" });
+      setProspects(list);
+    } catch (err) {
+      console.error("Error al cargar prospectos:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProspects();
+  }, [fetchProspects]);
+
+  const pendingCount = useMemo(
+    () => prospects.filter((p) => (p.estado || "pendiente") === "pendiente").length,
+    [prospects]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return prospects.filter((p) => {
+      const st = p.estado || "pendiente";
+      if (filterStatus !== "all" && st !== filterStatus) return false;
+      if (!q) return true;
+      return (
+        p.nombre_agencia.toLowerCase().includes(q) ||
+        (p.ciudad || "").toLowerCase().includes(q) ||
+        (p.codigo_postal || "").toLowerCase().includes(q) ||
+        (p.telefono || "").toLowerCase().includes(q) ||
+        (p.email || "").toLowerCase().includes(q)
+      );
+    });
+  }, [prospects, filterStatus, search]);
+
+  const handleAddSingle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombreAgencia.trim()) return;
+    try {
+      await pbClient.collection("prospectos_inmobiliarias").create({
+        nombre_agencia: nombreAgencia.trim(),
+        persona_contacto: personaContacto.trim(),
+        telefono: telefono.trim(),
+        email: email.trim(),
+        web: web.trim(),
+        ciudad: ciudad.trim(),
+        codigo_postal: codigoPostal.trim(),
+        origen: "manual",
+        estado: "pendiente",
+        notas: notas.trim(),
+      });
+      setNombreAgencia("");
+      setPersonaContacto("");
+      setTelefono("");
+      setEmail("");
+      setWeb("");
+      setCiudad("");
+      setCodigoPostal("");
+      setNotas("");
+      setShowAdd(false);
+      await fetchProspects();
+    } catch (err: any) {
+      alert("Error al guardar prospecto: " + err.message);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    const lines = bulkText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length === 0) return;
+
+    let created = 0;
+    for (const line of lines) {
+      const parts = line.split(/[;,|\t]/).map((s) => s.trim());
+      if (!parts[0]) continue;
+      try {
+        await pbClient.collection("prospectos_inmobiliarias").create({
+          nombre_agencia: parts[0],
+          telefono: parts[1] || "",
+          email: parts[2] || "",
+          ciudad: parts[3] || "",
+          codigo_postal: parts[4] || "",
+          origen: "importado",
+          estado: "pendiente",
+        });
+        created++;
+      } catch (err) {
+        console.error("Error importando línea:", line, err);
+      }
+    }
+    setBulkText("");
+    setShowBulk(false);
+    await fetchProspects();
+    alert(`Se importaron ${created} inmobiliarias.`);
+  };
+
+  const handleStatusChange = async (
+    id: string,
+    newStatus: NonNullable<ProspectItem["estado"]>
+  ) => {
+    try {
+      await pbClient
+        .collection("prospectos_inmobiliarias")
+        .update(id, { estado: newStatus });
+      setProspects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, estado: newStatus } : p))
+      );
+    } catch (err: any) {
+      alert("Error al actualizar estado: " + err.message);
+    }
+  };
+
+  const handleConvertToAgency = async (p: ProspectItem) => {
+    if (
+      !confirm(
+        `¿Dar de alta a "${p.nombre_agencia}" como Agencia Activa en el CRM y marcarla como cliente?`
+      )
+    ) {
+      return;
+    }
+    try {
+      await pbClient.collection("inmobiliarias").create({
+        nombre: p.nombre_agencia,
+        persona_contacto: p.persona_contacto || "",
+        telefono: p.telefono || "Sin teléfono",
+        email: p.email || "sin-email@pendiente.com",
+        direccion: [p.ciudad, p.codigo_postal].filter(Boolean).join(" "),
+        pais: "España",
+        idioma: "Español",
+        acuerdo: "Prueba gratuita",
+        notas: p.notas || `Captada desde ${p.origen || "prospección"}`,
+        estado: true,
+      });
+      await handleStatusChange(p.id, "cliente");
+      alert(
+        `✅ "${p.nombre_agencia}" añadida a Agencias Activas. Ya puedes asignarle sus Códigos Postales en "Agencias Inmobiliarias" -> "Asignación por Zonas".`
+      );
+    } catch (err: any) {
+      alert("Error al convertir a agencia activa: " + err.message);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar el prospecto "${name}"?`)) return;
+    try {
+      await pbClient.collection("prospectos_inmobiliarias").delete(id);
+      setProspects((prev) => prev.filter((p) => p.id !== id));
+    } catch (err: any) {
+      alert("Error al eliminar: " + err.message);
+    }
+  };
+
+  return (
+    <section className="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden shadow-lg">
+      {/* Header */}
+      <div
+        onClick={() => setCollapsed(!collapsed)}
+        className="px-6 py-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🎯</span>
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              Captación de Agencias (Prospección B2B)
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-white/10">
+                {prospects.length}
+              </span>
+              {pendingCount > 0 && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30">
+                  {pendingCount} pendientes
+                </span>
+              )}
+            </h2>
+            <p className="text-[11px] text-slate-400">
+              Solicitudes desde /inmobiliarias y prospección por código postal con WhatsApp / Email en 1 clic
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          <a
+            href="/inmobiliarias"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold transition-colors"
+          >
+            Ver /inmobiliarias ↗
+          </a>
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-xs text-slate-400 hover:text-white px-2 py-1"
+          >
+            {collapsed ? "▼ Expandir" : "▲ Ocultar"}
+          </button>
+        </div>
+      </div>
+
+      {!collapsed && (
+        <div className="px-6 pb-6 pt-2 border-t border-white/10 space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar agencia, ciudad o CP..."
+                className="px-3 py-1.5 bg-slate-950 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-emerald-400 w-56"
+              />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-1.5 bg-slate-950 border border-white/10 rounded-lg text-xs text-slate-200 outline-none"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="contactada">Contactadas</option>
+                <option value="prueba_enviada">Prueba enviada</option>
+                <option value="cliente">Clientes activos</option>
+                <option value="descartada">Descartadas</option>
+              </select>
+              <select
+                value={template}
+                onChange={(e) => setTemplate(e.target.value as TemplateKey)}
+                title="Plantilla usada al pulsar WhatsApp o Email"
+                className="px-3 py-1.5 bg-slate-950 border border-blue-400/30 rounded-lg text-xs text-blue-200 outline-none"
+              >
+                <option value="trojan">Plantilla: Tengo 1 lead en tu CP</option>
+                <option value="cold">Plantilla: Primer contacto frío</option>
+                <option value="followup">Plantilla: Último aviso exclusividad</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulk(!showBulk);
+                  setShowAdd(false);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-white/10"
+              >
+                📥 Importar lote
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdd(!showAdd);
+                  setShowBulk(false);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950"
+              >
+                + Añadir agencia
+              </button>
+            </div>
+          </div>
+
+          {/* Form Añadir individual */}
+          {showAdd && (
+            <form
+              onSubmit={handleAddSingle}
+              className="bg-slate-950/70 border border-white/10 rounded-xl p-4 grid sm:grid-cols-4 gap-3"
+            >
+              <input
+                type="text"
+                required
+                value={nombreAgencia}
+                onChange={(e) => setNombreAgencia(e.target.value)}
+                placeholder="Nombre inmobiliaria *"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <input
+                type="text"
+                value={personaContacto}
+                onChange={(e) => setPersonaContacto(e.target.value)}
+                placeholder="Persona contacto"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <input
+                type="text"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="Teléfono / WhatsApp"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <input
+                type="text"
+                value={ciudad}
+                onChange={(e) => setCiudad(e.target.value)}
+                placeholder="Ciudad"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <input
+                type="text"
+                value={codigoPostal}
+                onChange={(e) => setCodigoPostal(e.target.value)}
+                placeholder="Códigos postales (08201, 08202)"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <input
+                type="text"
+                value={web}
+                onChange={(e) => setWeb(e.target.value)}
+                placeholder="Web"
+                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
+              >
+                Guardar prospecto
+              </button>
+            </form>
+          )}
+
+          {/* Importar lote */}
+          {showBulk && (
+            <div className="bg-slate-950/70 border border-white/10 rounded-xl p-4 space-y-2">
+              <p className="text-xs text-slate-300 font-semibold">
+                Pega una agencia por línea con formato: <code>Nombre;Teléfono;Email;Ciudad;CP</code>
+              </p>
+              <textarea
+                rows={4}
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                placeholder={"Fincas Sabadell;600111222;info@fincassabadell.com;Sabadell;08201\nInmo Terrassa;611222333;hola@inmoterrassa.es;Terrassa;08221"}
+                className="w-full px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs text-white font-mono"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulk(false)}
+                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkImport}
+                  className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
+                >
+                  Importar líneas
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Tabla */}
+          {loading ? (
+            <p className="text-xs text-slate-400 py-4 text-center">Cargando prospectos...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-xs text-slate-500 py-6 text-center">
+              No hay inmobiliarias en esta vista todavía.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 text-slate-400 uppercase text-[10px]">
+                    <th className="py-2.5 pr-3">Agencia</th>
+                    <th className="py-2.5 px-3">Zona / CP</th>
+                    <th className="py-2.5 px-3">Contacto</th>
+                    <th className="py-2.5 px-3">Estado</th>
+                    <th className="py-2.5 pl-3 text-right">Acciones rápidas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filtered.map((p) => {
+                    const st = p.estado || "pendiente";
+                    const meta = STATUS_META[st] || STATUS_META.pendiente;
+                    const msg = buildMessage(template, p);
+                    const waHref = p.telefono
+                      ? `https://wa.me/${cleanWaPhone(p.telefono)}?text=${encodeURIComponent(msg.body)}`
+                      : null;
+                    const mailHref = p.email
+                      ? `mailto:${p.email}?subject=${encodeURIComponent(msg.subject)}&body=${encodeURIComponent(msg.body)}`
+                      : null;
+
+                    return (
+                      <tr key={p.id} className="hover:bg-white/[0.02]">
+                        <td className="py-3 pr-3 align-top">
+                          <div className="font-bold text-white">{p.nombre_agencia}</div>
+                          {p.persona_contacto && (
+                            <div className="text-[11px] text-slate-400">{p.persona_contacto}</div>
+                          )}
+                          <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300">
+                            {p.origen === "landing_inmobiliarias" ? "🌐 Landing B2B" : p.origen || "Manual"}
+                          </span>
+                          {p.notas && (
+                            <p className="text-[11px] text-slate-400 mt-1 max-w-xs truncate" title={p.notas}>
+                              {p.notas}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 align-top text-slate-200">
+                          <div>{p.ciudad || "—"}</div>
+                          {p.codigo_postal && (
+                            <div className="text-[11px] text-emerald-300 font-mono">
+                              CP: {p.codigo_postal}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 align-top text-slate-300 space-y-0.5">
+                          {p.telefono && <div>📞 {p.telefono}</div>}
+                          {p.email && <div className="text-[11px] text-slate-400">✉️ {p.email}</div>}
+                          {p.web && (
+                            <a
+                              href={p.web.startsWith("http") ? p.web : `https://${p.web}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] text-blue-400 hover:underline block"
+                            >
+                              {p.web}
+                            </a>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 align-top">
+                          <select
+                            value={st}
+                            onChange={(e) =>
+                              handleStatusChange(
+                                p.id,
+                                e.target.value as NonNullable<ProspectItem["estado"]>
+                              )
+                            }
+                            className={`px-2 py-1 rounded-lg border text-[11px] font-semibold outline-none cursor-pointer ${meta.cls}`}
+                          >
+                            <option value="pendiente">Pendiente</option>
+                            <option value="contactada">Contactada</option>
+                            <option value="prueba_enviada">Prueba enviada</option>
+                            <option value="cliente">Cliente activo</option>
+                            <option value="descartada">Descartada</option>
+                          </select>
+                        </td>
+                        <td className="py-3 pl-3 align-top">
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            {waHref && (
+                              <a
+                                href={waHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => {
+                                  if (st === "pendiente") {
+                                    handleStatusChange(p.id, "contactada");
+                                  }
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 font-semibold"
+                              >
+                                💬 WhatsApp
+                              </a>
+                            )}
+                            {mailHref && (
+                              <a
+                                href={mailHref}
+                                onClick={() => {
+                                  if (st === "pendiente") {
+                                    handleStatusChange(p.id, "contactada");
+                                  }
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30 text-blue-300 font-semibold"
+                              >
+                                ✉️ Email
+                              </a>
+                            )}
+                            {st !== "cliente" && (
+                              <button
+                                type="button"
+                                onClick={() => handleConvertToAgency(p)}
+                                className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 text-amber-300 font-semibold cursor-pointer"
+                              >
+                                ✅ Activar
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(p.id, p.nombre_agencia)}
+                              className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 cursor-pointer"
+                              title="Eliminar"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
