@@ -32,6 +32,7 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
   const [idioma, setIdioma] = useState("Español");
   const [acuerdo, setAcuerdo] = useState("Prueba gratuita");
   const [notas, setNotas] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
 
   const t = T(lang).admin.agencies;
 
@@ -84,6 +85,7 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
     setIdioma("Español");
     setAcuerdo("Prueba gratuita");
     setNotas("");
+    setTelegramChatId("");
   }
 
   function startEdit(a: AgenciaItem) {
@@ -97,6 +99,7 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
     setIdioma(a.idioma || "Español");
     setAcuerdo(a.acuerdo || "Prueba gratuita");
     setNotas(a.notas || "");
+    setTelegramChatId(a.telegram_chat_id || "");
   }
 
   async function handleSaveAgencia(e: React.FormEvent) {
@@ -112,6 +115,7 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
       idioma: idioma.trim() || "Español",
       acuerdo: acuerdo.trim(),
       notas: notas.trim(),
+      telegram_chat_id: telegramChatId.trim(),
     };
     try {
       if (editingId) {
@@ -245,6 +249,11 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
                 </div>
 
                 <div>
+                  <label className="block text-[11px] text-slate-500 mb-1">Telegram Chat ID (opcional · envío automático)</label>
+                  <input type="text" value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)} placeholder="Ej. -1001234567890 o 1576271198" className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400" />
+                </div>
+
+                <div>
                   <label className="block text-[11px] text-slate-500 mb-1">Notas Internas</label>
                   <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Horario, preferencias, etc." className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-white text-xs outline-none focus:border-blue-400" />
                 </div>
@@ -296,6 +305,7 @@ export default function AgenciesAdmin({ lang = "es" }: AgenciesAdminProps) {
                             <div className="flex flex-wrap gap-1">
                               <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-200">{a.pais || "España"}</span>
                               <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-[10px] text-indigo-300">{a.idioma || "Español"}</span>
+                              {a.telegram_chat_id && <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-[10px] text-sky-300">✈️ Telegram</span>}
                             </div>
                             {a.acuerdo && <div className="text-[10px] text-emerald-400 mt-1">{a.acuerdo}</div>}
                           </td>

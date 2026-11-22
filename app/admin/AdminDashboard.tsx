@@ -43,6 +43,9 @@ export default function AdminDashboard() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [lang,     setLang]     = useState<Lang>("es");
+  const [deliveryMode, setDeliveryMode] = useState<"manual" | "auto">("manual");
+  const [configId, setConfigId] = useState<string | null>(null);
+  const [savingMode, setSavingMode] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("admin_lang") as Lang;
@@ -99,6 +102,7 @@ export default function AdminDashboard() {
           certificado_energetico: prop?.certificado_energetico,
           precio: val?.precio_sugerido,
           assigned_agency: assignedAgency ? assignedAgency.nombre : null,
+          assigned_agency_phone: assignedAgency ? assignedAgency.telefono : null,
           sent_status: assignedAgency ? "Enviado" : "No enviado",
           raw_propiedad: prop ? {
             m2: prop.m2_construidos,
@@ -119,6 +123,15 @@ export default function AdminDashboard() {
 
       setLeads(flat);
       setMetrics(computeMetrics(flat));
+
+      try {
+        const cfg = await pbClient.collection("app_config").getFirstListItem('key = "lead_delivery_mode"');
+        setConfigId(cfg.id);
+        setDeliveryMode(cfg.value === "auto" ? "auto" : "manual");
+      } catch {
+        // Si aún no existe, mantener manual por defecto
+      }
+
       setLoading(false);
     } catch (err: any) {
       setError(t.errorLoading + err.message);
@@ -130,6 +143,27 @@ export default function AdminDashboard() {
     const t = T(lang).admin.leads;
     setAbMode(newMode);
     alert(t.alertAb);
+  }
+
+  async function handleToggleDeliveryMode(nextMode: "manual" | "auto") {
+    if (savingMode || nextMode === deliveryMode) return;
+    setSavingMode(true);
+    try {
+      if (configId) {
+        await pbClient.collection("app_config").update(configId, { value: nextMode });
+      } else {
+        const created = await pbClient.collection("app_config").create({
+          key: "lead_delivery_mode",
+          value: nextMode,
+        });
+        setConfigId(created.id);
+      }
+      setDeliveryMode(nextMode);
+    } catch {
+      alert("Error al cambiar el modo de envío.");
+    } finally {
+      setSavingMode(false);
+    }
   }
 
   useEffect(() => {
@@ -243,13 +277,46 @@ export default function AdminDashboard() {
 
         {/* Leads Table */}
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              {t.leads.title}
-            </p>
-            {loading && (
-              <div className="w-4 h-4 border-2 border-slate-700 border-t-blue-400 rounded-full animate-spin" />
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {t.leads.title}
+              </p>
+              {loading && (
+                <div className="w-4 h-4 border-2 border-slate-700 border-t-blue-400 rounded-full animate-spin" />
+              )}
+            </div>
+
+            {/* Selector Modo de Envío Telegram (Manual vs Automático) */}
+            <div className="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl p-1">
+              <span className="text-[11px] text-slate-400 px-2 hidden sm:inline">Modo Telegram:</span>
+              <button
+                type="button"
+                disabled={savingMode}
+                onClick={() => handleToggleDeliveryMode("manual")}
+                title="Te avisa a tu Telegram para que tú lo reenvíes con 1 clic por WhatsApp o Telegram"
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  deliveryMode === "manual"
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-400/40"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                ✋ Revisar y Reenviar
+              </button>
+              <button
+                type="button"
+                disabled={savingMode}
+                onClick={() => handleToggleDeliveryMode("auto")}
+                title="Envía el lead directo al Telegram de la inmobiliaria y te confirma a ti por Telegram"
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  deliveryMode === "auto"
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                ⚡ Automático a Agencia
+              </button>
+            </div>
           </div>
           {error ? (
             <div className="p-6 text-center text-red-400 text-sm bg-red-500/5 border border-red-500/20 rounded-2xl">

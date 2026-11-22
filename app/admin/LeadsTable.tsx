@@ -24,6 +24,7 @@ export interface LeadRow {
   raw_propiedad?:         any;
   raw_valoracion?:        any;
   assigned_agency?:       string | null;
+  assigned_agency_phone?: string | null;
   sent_status?:           string | null;
 }
 
@@ -57,6 +58,15 @@ function Badge({ text, cls }: { text: string; cls: string }) {
 
 function Cell({ children, className = "", title }: { children: React.ReactNode; className?: string; title?: string }) {
   return <td className={`px-2 py-1.5 text-xs ${className}`} title={title}>{children}</td>;
+}
+
+function buildAgencyWaLink(l: LeadRow): string | null {
+  if (!l.assigned_agency_phone) return null;
+  const cleanPhone = l.assigned_agency_phone.replace(/[^\d]/g, "");
+  if (!cleanPhone) return null;
+  const contactPhone = l.telefono_final || l.telefono;
+  const text = `Hola ${l.assigned_agency || ""}, tenemos un nuevo propietario en tu zona.\n\nDetalles:\n- Propietario: ${l.nombre} (${contactPhone})\n- Dirección: ${l.direccion || "—"}\n- Valoración IA: ${l.precio ? l.precio.toLocaleString("es-ES") + " €" : "—"}`;
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
 }
 
 function exportCSV(rows: LeadRow[], lang: Lang) {
@@ -229,8 +239,21 @@ export default function LeadsTable({ leads, onRefresh, lang = "es" }: { leads: L
                 </Cell>
                 <Cell className="text-left py-1">
                   {l.sent_status === "Enviado" ? (
-                    <div className="space-y-0.5">
-                      <Badge text={t.sent} cls="bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge text={t.sent} cls="bg-emerald-500/10 text-emerald-400 border border-emerald-400/20" />
+                        {buildAgencyWaLink(l) && (
+                          <a
+                            href={buildAgencyWaLink(l)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Enviar lead por WhatsApp a ${l.assigned_agency}`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-500/15 hover:bg-green-500/25 border border-green-400/30 text-green-300 text-[10px] font-semibold transition-colors"
+                          >
+                            💬 WhatsApp
+                          </a>
+                        )}
+                      </div>
                       <div className="text-[10px] text-white truncate font-medium" title={l.assigned_agency || ""}>
                         {l.assigned_agency}
                       </div>

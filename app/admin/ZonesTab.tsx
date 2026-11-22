@@ -15,6 +15,7 @@ export interface AgenciaItem {
   idioma?: string;
   acuerdo?: string;
   notas?: string;
+  telegram_chat_id?: string;
 }
 
 export interface ZonaItem {
