@@ -123,6 +123,9 @@ async function handleRoutingAndNotification(
     leadDetails += `• *Código Postal:* ${cp || "No detectado"}\n`;
     leadDetails += `• *Superficie:* ${propiedad.m2_construidos} m²\n`;
     leadDetails += `• *Conservación:* ${propiedad.estado_conservacion}\n`;
+    if (lead.utm_source || lead.utm_campaign) {
+      leadDetails += `\n📣 *Campaña:* ${lead.utm_source || "directo"}${lead.utm_campaign ? ` · \`${lead.utm_campaign}\`` : ""}\n`;
+    }
 
     if (!agency) {
       await sendTelegramAlert(

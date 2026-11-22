@@ -131,7 +131,7 @@ export default function LeadsTable({ leads, onRefresh, lang = "es" }: { leads: L
 
   const filtered = q.trim()
     ? leads.filter(l =>
-        [l.nombre, l.email, l.telefono, l.direccion, l.utm_source]
+        [l.nombre, l.email, l.telefono, l.direccion, l.utm_source, l.utm_campaign]
           .some(f => f?.toLowerCase().includes(q.toLowerCase()))
       )
     : leads;
@@ -170,7 +170,7 @@ export default function LeadsTable({ leads, onRefresh, lang = "es" }: { leads: L
             <col className="w-[66px]" />   {/* Valoración */}
             <col className="w-[36px]" />   {/* A/B */}
             <col className="w-[36px]" />   {/* PDF */}
-            <col className="w-[66px]" />   {/* Urgencia */}
+            <col className="w-[105px]" />  {/* Urgencia / Campaña */}
             <col className="w-[110px]" />  {/* Envío */}
           </colgroup>
           <thead>
@@ -233,9 +233,30 @@ export default function LeadsTable({ leads, onRefresh, lang = "es" }: { leads: L
                   )}
                 </Cell>
                 <Cell className="text-center">
-                  {l.venta_urgencia
-                    ? <Badge text={tm[l.venta_urgencia as keyof typeof tm]?.label || l.venta_urgencia} cls="bg-amber-500/20 text-amber-400" />
-                    : <span className="text-slate-600">—</span>}
+                  <div className="flex flex-col items-center gap-1">
+                    {l.venta_urgencia ? (
+                      <Badge text={tm[l.venta_urgencia as keyof typeof tm]?.label || l.venta_urgencia} cls="bg-amber-500/20 text-amber-400" />
+                    ) : !l.utm_campaign && !l.utm_source ? (
+                      <span className="text-slate-600">—</span>
+                    ) : null}
+                    {l.utm_campaign && (
+                      <Badge
+                        text={l.utm_campaign}
+                        cls={
+                          l.utm_campaign.includes("1_3")
+                            ? "bg-rose-500/20 text-rose-300 border border-rose-400/30"
+                            : l.utm_campaign.includes("3_6")
+                              ? "bg-blue-500/20 text-blue-300 border border-blue-400/30"
+                              : "bg-slate-800 text-slate-300 border border-white/10"
+                        }
+                      />
+                    )}
+                    {l.utm_source && (
+                      <span className="text-[9px] text-slate-500 truncate max-w-[95px]" title={`Origen: ${l.utm_source}`}>
+                        {l.utm_source}
+                      </span>
+                    )}
+                  </div>
                 </Cell>
                 <Cell className="text-left py-1">
                   {l.sent_status === "Enviado" ? (
