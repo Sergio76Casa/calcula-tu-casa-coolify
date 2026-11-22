@@ -37,6 +37,9 @@ export async function buscarValoracionEnCache(
     if (p.jardin !== undefined) {
       filterProp += ` && jardin = ${p.jardin}`;
     }
+    if (p.garaje !== undefined) {
+      filterProp += ` && garaje = ${p.garaje}`;
+    }
 
     console.log("[Caché] Buscando propiedad existente con filtro:", filterProp);
     const propsExistentes = await pbList("propiedades", filterProp);
@@ -133,6 +136,7 @@ export async function guardarPropiedadEnBD(
     habitaciones: p.habitaciones || null,
     ascensor: p.ascensor ?? null,
     jardin: p.jardin ?? null,
+    garaje: p.garaje ?? null,
     certificado_energetico: p.certificado_energetico || null,
     entorno_json: JSON.stringify(entorno),
   });

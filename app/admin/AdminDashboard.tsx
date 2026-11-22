@@ -111,6 +111,7 @@ export default function AdminDashboard() {
             habitaciones: prop.habitaciones,
             ascensor: prop.ascensor,
             jardin: prop.jardin,
+            garaje: prop.garaje,
             energyCertificate: prop.certificado_energetico
           } : null,
           raw_valoracion: val ? {

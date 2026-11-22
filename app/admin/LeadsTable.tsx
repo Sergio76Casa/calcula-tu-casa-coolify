@@ -93,6 +93,7 @@ function buildAgencyWaLink(l: LeadRow): string | null {
     `- Estado: ${p.estado || "—"}`,
     `- Ascensor: ${p.ascensor === true ? "Sí" : p.ascensor === false ? "No" : "No indicado"}`,
     `- Jardín/Terraza: ${p.jardin === true ? "Sí" : p.jardin === false ? "No" : "No indicado"}`,
+    `- ${p.tipo === "piso" ? "Plaza de parking" : "Garaje"}: ${p.garaje === true ? "Sí" : p.garaje === false ? "No" : "No indicado"}`,
     `- Cert. Energético: ${cert}`,
     `- Valoración estimada IA: ${l.precio ? l.precio.toLocaleString("es-ES") + " €" : "—"}`,
   ].filter((line) => line !== null);

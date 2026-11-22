@@ -59,7 +59,8 @@ function HomeInner({ variant }: { variant: Variant }) {
     address && details
       ? { address, m2: details.m2, estado: details.estado,
           tipo: details.tipo, habitaciones: details.habitaciones,
-          ascensor: details.ascensor, jardin: details.jardin, lang,
+          ascensor: details.ascensor, jardin: details.jardin,
+          garaje: details.garaje, lang,
           energyCertificate: details.energyCertificate }
       : null;
 

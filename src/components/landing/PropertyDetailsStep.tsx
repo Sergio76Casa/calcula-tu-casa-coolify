@@ -17,6 +17,7 @@ export interface PropertyDetails {
   habitaciones: number;
   ascensor?: boolean;
   jardin?: boolean;
+  garaje?: boolean;
   energyCertificate?: EnergyCertificate;
 }
 
@@ -47,6 +48,7 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
   const [habitaciones, setHab]  = useState<number | null>(null);
   const [ascensor, setAscensor]     = useState(false);
   const [jardin, setJardin]         = useState(false);
+  const [garaje, setGaraje]         = useState(false);
   const [energyCert, setEnergyCert] = useState<EnergyCertificate | null>(null);
   const [errors, setErrors]         = useState<Record<string, string>>({});
   const [estimatedRange, setEstimatedRange] = useState<{ min: number; max: number } | null>(null);
@@ -101,7 +103,9 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
     if (!validate()) return;
     onCalculate?.({
       m2: parseInt(m2), estado: estado!, tipo: tipo!, habitaciones: habitaciones!,
-      ...(tipo === "piso" ? { ascensor } : { jardin }),
+      ascensor,
+      garaje,
+      ...(tipo === "casa" ? { jardin } : {}),
       ...(energyCert ? { energyCertificate: energyCert } : {}),
     });
   }
@@ -175,17 +179,47 @@ export default function PropertyDetailsStep({ lang, address, onCalculate, onBack
             <PillGroup options={HAB_OPTIONS} value={habitaciones} onChange={(v) => { setHab(v); clearErr("hab"); }} error={errors.hab} />
           </div>
 
-          {/* Ascensor / Jardín (condicional) */}
+          {/* Extras según tipo de propiedad */}
           {tipo === "piso" && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-3">{tf.ascensorLabel}</label>
-              <ToggleOption label={tf.ascensorOpt} emoji="🛗" value={ascensor} onChange={setAscensor} />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-3">{tf.ascensorLabel}</label>
+                <ToggleOption label={tf.ascensorOpt} emoji="🛗" value={ascensor} onChange={setAscensor} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-3">
+                  {lang === "ca" ? "Té plaça de pàrquing?" : lang === "en" ? "Does it include a parking space?" : "¿Incluye plaza de parking?"}
+                </label>
+                <ToggleOption
+                  label={lang === "ca" ? "Sí, té plaça de pàrquing" : lang === "en" ? "Yes, includes parking space" : "Sí, incluye plaza de parking"}
+                  emoji="🅿️"
+                  value={garaje}
+                  onChange={setGaraje}
+                />
+              </div>
             </div>
           )}
           {tipo === "casa" && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-3">{tf.jardinLabel}</label>
-              <ToggleOption label={tf.jardinOpt} emoji="🌿" value={jardin} onChange={setJardin} />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-3">{tf.jardinLabel}</label>
+                <ToggleOption label={tf.jardinOpt} emoji="🌿" value={jardin} onChange={setJardin} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-3">{tf.ascensorLabel}</label>
+                <ToggleOption label={tf.ascensorOpt} emoji="🛗" value={ascensor} onChange={setAscensor} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-3">
+                  {lang === "ca" ? "Té garatge?" : lang === "en" ? "Does it have a garage?" : "¿Tiene garaje?"}
+                </label>
+                <ToggleOption
+                  label={lang === "ca" ? "Sí, té garatge" : lang === "en" ? "Yes, it has a garage" : "Sí, tiene garaje"}
+                  emoji="🚗"
+                  value={garaje}
+                  onChange={setGaraje}
+                />
+              </div>
             </div>
           )}
 

@@ -142,6 +142,8 @@ async function handleRoutingAndNotification(
     const habLabel = propiedad.habitaciones ? `${propiedad.habitaciones} hab.` : "No indicado";
     const ascLabel = propiedad.ascensor === true ? "Sí" : propiedad.ascensor === false ? "No" : "No indicado";
     const jarLabel = propiedad.jardin === true ? "Sí" : propiedad.jardin === false ? "No" : "No indicado";
+    const garTitle = propiedad.tipo_propiedad === "piso" ? "Plaza de parking" : "Garaje";
+    const garLabel = propiedad.garaje === true ? "Sí" : propiedad.garaje === false ? "No" : "No indicado";
     const certLabel = propiedad.certificado_energetico
       ? propiedad.certificado_energetico === "pending"
         ? "Pendiente"
@@ -157,6 +159,7 @@ async function handleRoutingAndNotification(
     leadDetails += `• *Tipo:* ${tipoLabel} | *Superficie:* ${propiedad.m2_construidos} m²\n`;
     leadDetails += `• *Habitaciones:* ${habLabel} | *Estado:* ${propiedad.estado_conservacion}\n`;
     leadDetails += `• *Ascensor:* ${ascLabel} | *Jardín/Terraza:* ${jarLabel}\n`;
+    leadDetails += `• *${garTitle}:* ${garLabel}\n`;
     leadDetails += `• *Cert. Energético:* ${certLabel}\n`;
     leadDetails += `• *Valoración IA:* ${precioLabel}\n`;
     if (lead.utm_source || lead.utm_campaign) {
@@ -188,6 +191,7 @@ async function handleRoutingAndNotification(
       `- Estado: ${propiedad.estado_conservacion}`,
       `- Ascensor: ${ascLabel}`,
       `- Jardín/Terraza: ${jarLabel}`,
+      `- ${garTitle}: ${garLabel}`,
       `- Cert. Energético: ${certLabel}`,
       `- Valoración estimada IA: ${precioLabel}`,
     ].filter((line) => line !== null);
@@ -207,6 +211,7 @@ async function handleRoutingAndNotification(
         `• *Tipo:* ${tipoLabel} | *Superficie:* ${propiedad.m2_construidos} m²\n` +
         `• *Habitaciones:* ${habLabel} | *Estado:* ${propiedad.estado_conservacion}\n` +
         `• *Ascensor:* ${ascLabel} | *Jardín/Terraza:* ${jarLabel}\n` +
+        `• *${garTitle}:* ${garLabel}\n` +
         `• *Cert. Energético:* ${certLabel}\n` +
         `• *Valoración IA:* ${precioLabel}` +
         (isHotLead || lead.utm_campaign ? `\n🔥 *Urgencia:* ${urgencia || lead.utm_campaign}` : "") +

@@ -67,5 +67,21 @@ export function normalizarPropiedad(propiedad: PropiedadInput): PropiedadInput {
     }
   }
 
+  // Normalizar garaje / parking
+  if (p.garaje !== undefined && p.garaje !== null) {
+    const garVal = String(p.garaje).trim().toLowerCase();
+    if (garVal === "" || garVal === "undefined" || garVal === "null") {
+      p.garaje = undefined;
+    } else {
+      p.garaje =
+        garVal === "true" ||
+        garVal === "1" ||
+        garVal === "sí" ||
+        garVal === "si" ||
+        garVal === "yes" ||
+        garVal === "y";
+    }
+  }
+
   return p;
 }

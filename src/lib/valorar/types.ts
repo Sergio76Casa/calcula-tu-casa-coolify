@@ -12,6 +12,7 @@ export interface PropiedadInput {
   habitaciones?: number;
   ascensor?: boolean;
   jardin?: boolean;
+  garaje?: boolean;
   certificado_energetico?: string;
 }
 

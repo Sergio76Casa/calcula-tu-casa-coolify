@@ -41,12 +41,18 @@ export function buildPrompt(
       : p.habitaciones >= 4
       ? "4 o más"
       : String(p.habitaciones);
-  const extraLine =
-    p.tipo_propiedad === "piso" && p.ascensor !== undefined
-      ? `  Ascensor    : ${p.ascensor ? "Sí" : "No"}`
-      : p.tipo_propiedad === "casa" && p.jardin !== undefined
-      ? `  Jardín      : ${p.jardin ? "Sí" : "No"}`
-      : "";
+  const extraLines: string[] = [];
+  if (p.ascensor !== undefined) {
+    extraLines.push(`  Ascensor    : ${p.ascensor ? "Sí" : "No"}`);
+  }
+  if (p.tipo_propiedad === "casa" && p.jardin !== undefined) {
+    extraLines.push(`  Jardín      : ${p.jardin ? "Sí" : "No"}`);
+  }
+  if (p.garaje !== undefined) {
+    const garajeLabel = p.tipo_propiedad === "piso" ? "Plaza de parking" : "Garaje";
+    extraLines.push(`  ${garajeLabel.padEnd(12)}: ${p.garaje ? "Sí" : "No"}`);
+  }
+  const extraLine = extraLines.join("\n");
   const certLine = p.certificado_energetico
     ? `  Cert. Energético: ${p.certificado_energetico.toUpperCase()}`
     : "";
@@ -69,10 +75,11 @@ INSTRUCCIONES:
 1. Analiza los testigos para calcular el precio por m² de la zona.
 2. Aplica un coeficiente de ajuste según el estado de conservación y el tipo de propiedad.
 3. El número de habitaciones impacta el precio: más habitaciones aumentan el valor relativo por m².
-4. Si hay ascensor, aplica una prima positiva (su ausencia puede penalizar hasta un 8% en plantas altas).
+4. Si hay ascensor (tanto en pisos como en casas unifamiliares), aplica una prima positiva (su ausencia en pisos altos puede penalizar hasta un 8%, y en casas aporta gran accesibilidad y valor añadido).
 5. Si hay jardín o parcela, aplica un incremento del 10-25% según la zona.
-6. En el argumentario menciona EXPLÍCITAMENTE cómo el ascensor, jardín o número de habitaciones influye en el precio final.
-7. Certificado energético "${p.certificado_energetico ?? "no informado"}":
+6. Si incluye plaza de parking (en piso) o garaje privado (en casa), aplica su valor real de mercado en esa zona (típicamente +12.000€ a +28.000€ según demanda de aparcamiento en la ubicación).
+7. En el argumentario menciona EXPLÍCITAMENTE cómo el ascensor, garaje/parking, jardín o número de habitaciones influye en el precio final.
+8. Certificado energético "${p.certificado_energetico ?? "no informado"}":
    - A, B o C → prima del 4-7% sobre el precio base; inclúyelo como punto fuerte en el argumentario.
    - D → impacto neutro; mención breve.
    - E, F o G → descuento del 3-6%; inclúyelo como punto a considerar en el argumentario.

@@ -15,6 +15,7 @@ export interface ValuationInput {
   habitaciones: number;
   ascensor?: boolean;
   jardin?: boolean;
+  garaje?: boolean;
   lang?: Lang;
   energyCertificate?: EnergyCertificate;
 }
@@ -129,6 +130,7 @@ export default function LoadingValuationStep({
               habitaciones:             input.habitaciones,
               ascensor:                 input.ascensor,
               jardin:                   input.jardin,
+              garaje:                   input.garaje,
               certificado_energetico:   input.energyCertificate,
             },
           }),
