@@ -62,8 +62,11 @@ function Cell({ children, className = "", title }: { children: React.ReactNode; 
 
 function buildAgencyWaLink(l: LeadRow): string | null {
   if (!l.assigned_agency_phone) return null;
-  const cleanPhone = l.assigned_agency_phone.replace(/[^\d]/g, "");
+  let cleanPhone = l.assigned_agency_phone.replace(/[^\d]/g, "");
   if (!cleanPhone) return null;
+  if (cleanPhone.length === 9 && /^[6789]/.test(cleanPhone)) {
+    cleanPhone = `34${cleanPhone}`;
+  }
   const contactPhone = l.telefono_final || l.telefono;
   const text = `Hola ${l.assigned_agency || ""}, tenemos un nuevo propietario en tu zona.\n\nDetalles:\n- Propietario: ${l.nombre} (${contactPhone})\n- Dirección: ${l.direccion || "—"}\n- Valoración IA: ${l.precio ? l.precio.toLocaleString("es-ES") + " €" : "—"}`;
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;

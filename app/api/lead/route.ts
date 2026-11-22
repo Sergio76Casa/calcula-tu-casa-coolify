@@ -2,10 +2,18 @@ import { NextResponse } from "next/server";
 import { pbCreate, pbUpdate, pbList } from "@/lib/pocketbase";
 
 function cleanPhone(phone: string): string {
-  return phone.replace(/[^\d+]/g, "").replace(/^\+/, "");
+  const digits = phone.replace(/[^\d]/g, "");
+  if (digits.length === 9 && /^[6789]/.test(digits)) {
+    return `34${digits}`;
+  }
+  return digits;
 }
 
-async function sendTelegramAlert(message: string, targetChatId?: string) {
+async function sendTelegramAlert(
+  message: string,
+  targetChatId?: string,
+  inlineButtons?: { text: string; url: string }[][]
+) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = targetChatId || process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
@@ -13,15 +21,19 @@ async function sendTelegramAlert(message: string, targetChatId?: string) {
     return false;
   }
   try {
+    const body: Record<string, any> = {
+      chat_id: chatId,
+      text: message,
+      parse_mode: "Markdown",
+      disable_web_page_preview: true,
+    };
+    if (inlineButtons && inlineButtons.length > 0) {
+      body.reply_markup = { inline_keyboard: inlineButtons };
+    }
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       console.error("[Telegram Error response]", await res.text());
@@ -167,10 +179,11 @@ async function handleRoutingAndNotification(
     adminMsg += `\n🏢 *Agencia Asignada (CP ${cp}):*\n`;
     adminMsg += `• *Nombre:* ${agency.nombre}\n`;
     adminMsg += `• *Teléfono:* ${agency.telefono}\n`;
-    adminMsg += `• *Email:* ${agency.email}\n\n`;
-    adminMsg += `💬 [Enviar lead por WhatsApp a ${agency.nombre}](${waLink})`;
+    adminMsg += `• *Email:* ${agency.email}`;
 
-    await sendTelegramAlert(adminMsg);
+    await sendTelegramAlert(adminMsg, undefined, [
+      [{ text: `💬 Enviar lead por WhatsApp a ${agency.nombre}`, url: waLink }],
+    ]);
   } catch (err) {
     console.error("[handleRoutingAndNotification Error]", err);
   }
