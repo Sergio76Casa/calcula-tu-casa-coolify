@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { T, type Lang, type Variant } from "@/lib/translations";
 import type { ValuationResult } from "./LoadingValuationStep";
 import { PriceTease, Field } from "./FormControls";
@@ -30,15 +30,31 @@ interface LeadCaptureStepProps {
   onBack?: () => void;
 }
 
-// ─── Testimonios rotatorios ───────────────────────────────────────────────────
+// ─── Consentimiento RGPD ──────────────────────────────────────────────────────
 
-const TESTIMONIOS = [
-  { stars: 5, text: 'En 30 segundos supe que podía pedir 20.000€ más por mi piso', name: 'David M.', city: 'Barcelona' },
-  { stars: 5, text: 'La tasadora oficial confirmó el precio casi al céntimo', name: 'Carmen R.', city: 'Madrid' },
-  { stars: 5, text: 'Vendí en 3 semanas al precio que me recomendó CalculaTuCasa', name: 'Jordi P.', city: 'Sabadell' },
-  { stars: 5, text: 'Increíble precisión. Me ahorró meses de negociación', name: 'Ana L.', city: 'Valencia' },
-];
-
+const CONSENT_TEXT: Record<Lang, { before: string; link: string; after: string; error: string; benefit: string }> = {
+  es: {
+    before: "Acepto que mis datos (nombre, teléfono y datos de la vivienda) se cedan a una inmobiliaria de mi zona para que me contacte sobre la venta. ",
+    link: "Política de Privacidad",
+    after: "",
+    error: "Debes aceptar para poder continuar.",
+    benefit: "📞 Una inmobiliaria local podrá llamarte, sin compromiso, para asesorarte sobre la venta.",
+  },
+  ca: {
+    before: "Accepto que les meves dades (nom, telèfon i dades de l'habitatge) es cedeixin a una immobiliària de la meva zona perquè em contacti sobre la venda. ",
+    link: "Política de Privacitat",
+    after: "",
+    error: "Has d'acceptar per poder continuar.",
+    benefit: "📞 Una immobiliària local et podrà trucar, sense compromís, per assessorar-te sobre la venda.",
+  },
+  en: {
+    before: "I agree to share my data (name, phone and property details) with a real estate agency in my area so they can contact me about selling. ",
+    link: "Privacy Policy",
+    after: "",
+    error: "You must accept to continue.",
+    benefit: "📞 A local agency may call you, with no obligation, to advise you on selling.",
+  },
+};
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -47,27 +63,15 @@ export default function LeadCaptureStep({
   result, prefillName, onFinish, onBack,
 }: LeadCaptureStepProps) {
   const tc = T(lang).capture;
+  const consent = CONSENT_TEXT[lang];
   const [form, setForm]         = useState<LeadForm>({ nombre: prefillName || "", telefono: "", email: "" });
+  const [accepted, setAccepted] = useState(false);
+  const [consentError, setConsentError] = useState(false);
   const [errors, setErrors]     = useState<FormErrors>({});
   const [loading, setLoading]   = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Testimonios rotatorios
-  const [testiIdx, setTestiIdx] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTestiIdx((i) => (i + 1) % TESTIMONIOS.length);
-    }, 3800);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Countdown de urgencia (10 minutos)
-  const [seconds, setSeconds] = useState(600);
-  useEffect(() => {
-    const interval = setInterval(() => setSeconds((s) => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(interval);
-  }, []);
-  const timer = `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
+  // Testimonios y cuenta atrás eliminados (eran contenido ficticio)
 
   function validate(f: LeadForm): FormErrors {
     const errs: FormErrors = {};
@@ -90,6 +94,7 @@ export default function LeadCaptureStep({
     e.preventDefault();
     const errs = validate(form);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (!accepted) { setConsentError(true); return; }
 
     setLoading(true);
     setApiError(null);
@@ -109,6 +114,8 @@ export default function LeadCaptureStep({
           utm_source:   utmSource   || null,
           utm_campaign: utmCampaign || null,
           lang:         lang,
+          consentimiento: true,
+          consentimiento_texto: `${consent.before}${consent.link}${consent.after}`,
         }),
       });
 
@@ -163,22 +170,10 @@ export default function LeadCaptureStep({
         {/* PriceTease mejorado */}
         <PriceTease result={result} priceReady={tc.priceReady} locked={tc.locked.replace("🔒 ", "")} />
 
-        {/* Countdown urgencia */}
-        <div className="flex items-center justify-center gap-2 mb-4 text-xs text-slate-400">
-          <span>⏰</span>
-          <span>Tu valoración está reservada <span className="text-white font-mono font-semibold">{timer}</span></span>
-        </div>
+        {/* Beneficio claro (explica para qué se piden los datos) */}
+        <p className="text-slate-300 text-xs mb-4 text-center">{consent.benefit}</p>
 
         <p className="text-slate-400 text-sm mb-4 text-center">{tc.unlockHint}</p>
-
-        {/* Testimonio rotatorio */}
-        <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-xl">
-          <div className="flex gap-0.5 mb-1">
-            {Array(5).fill("★").map((s, i) => <span key={i} className="text-amber-400 text-xs">{s}</span>)}
-          </div>
-          <p className="text-slate-300 text-xs italic leading-relaxed">"{TESTIMONIOS[testiIdx].text}"</p>
-          <p className="text-slate-500 text-xs mt-1">— {TESTIMONIOS[testiIdx].name}, {TESTIMONIOS[testiIdx].city}</p>
-        </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <Field label={tc.fields.nombre.label} value={form.nombre}
@@ -200,6 +195,28 @@ export default function LeadCaptureStep({
             placeholder={tc.fields.email.placeholder} autoComplete="email"
             error={errors.email} onChange={set("email")} />
 
+          {/* Consentimiento RGPD (obligatorio, no premarcado) */}
+          <div>
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => { setAccepted(e.target.checked); setConsentError(false); }}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-500"
+              />
+              <span className="text-xs text-slate-400 leading-relaxed">
+                {consent.before}
+                <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">
+                  {consent.link}
+                </a>
+                {consent.after}
+              </span>
+            </label>
+            {consentError && (
+              <p role="alert" className="text-red-400 text-xs mt-1.5 px-1">{consent.error}</p>
+            )}
+          </div>
+
           {apiError && <p role="alert" className="text-red-400 text-sm px-1">{apiError}</p>}
 
           {/* CTA mejorado con badges de valor */}
@@ -218,7 +235,11 @@ export default function LeadCaptureStep({
           </div>
         </form>
 
-        <p className="text-slate-600 text-xs text-center mt-4">{tc.privacy}</p>
+        <p className="text-slate-600 text-xs text-center mt-4">
+          <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline">{consent.link}</a>
+          {" · "}
+          <a href="/aviso-legal" target="_blank" rel="noopener noreferrer" className="underline">Aviso legal</a>
+        </p>
 
         {/* Botón WhatsApp alternativo */}
         <div className="flex items-center gap-3 my-4">

@@ -21,7 +21,11 @@ export default function LoginGate({ lang = "es" }: LoginGateProps) {
     setLoading(true);
     setError("");
     try {
-      await pbClient.admins.authWithPassword(email, password);
+      try {
+        await pbClient.collection("_superusers").authWithPassword(email.trim(), password);
+      } catch {
+        await pbClient.admins.authWithPassword(email.trim(), password);
+      }
     } catch (err) {
       setError(t.error);
     } finally {

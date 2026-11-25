@@ -214,7 +214,16 @@ export async function POST(req: Request) {
       utm_source,
       utm_campaign,
       lang,
+      consentimiento,
+      consentimiento_texto,
     } = body;
+
+    if (consentimiento !== true) {
+      return NextResponse.json(
+        { error: "Es necesario aceptar la política de privacidad para continuar." },
+        { status: 400 }
+      );
+    }
 
     const data = await pbCreate("leads", {
       propiedad_id,
@@ -225,6 +234,9 @@ export async function POST(req: Request) {
       utm_source,
       utm_campaign,
       lang,
+      consentimiento: true,
+      consentimiento_fecha: new Date().toISOString(),
+      consentimiento_texto: typeof consentimiento_texto === "string" ? consentimiento_texto.slice(0, 600) : "",
       pdf_downloaded: false,
       quiere_vender: false,
     });

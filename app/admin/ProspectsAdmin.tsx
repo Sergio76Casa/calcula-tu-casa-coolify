@@ -92,9 +92,14 @@ export default function ProspectsAdmin() {
   const [search, setSearch] = useState("");
   const [template, setTemplate] = useState<TemplateKey>("trojan");
 
-  // Form manual / lote
+  // Form manual / lote / auto-buscador
   const [showAdd, setShowAdd] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
+  const [showAutoSearch, setShowAutoSearch] = useState(false);
+  const [autoCiudad, setAutoCiudad] = useState("Sabadell");
+  const [autoCp, setAutoCp] = useState("08201");
+  const [autoSearching, setAutoSearching] = useState(false);
+  const [autoResultMsg, setAutoResultMsg] = useState<string | null>(null);
   const [bulkText, setBulkText] = useState("");
   const [nombreAgencia, setNombreAgencia] = useState("");
   const [personaContacto, setPersonaContacto] = useState("");
@@ -205,6 +210,35 @@ export default function ProspectsAdmin() {
     setShowBulk(false);
     await fetchProspects();
     alert(`Se importaron ${created} inmobiliarias.`);
+  };
+
+  const handleAutoSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!autoCiudad.trim() && !autoCp.trim()) return;
+    setAutoSearching(true);
+    setAutoResultMsg(null);
+    try {
+      const res = await fetch("/api/inmobiliarias/buscar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ciudad: autoCiudad.trim(),
+          codigo_postal: autoCp.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Error al buscar agencias");
+      }
+      setAutoResultMsg(
+        `✅ Encontradas ${data.found} agencias verificadas en ${[autoCiudad, autoCp].filter(Boolean).join(" ")}: ${data.inserted} nuevas guardadas, ${data.skipped} duplicadas omitidas.`
+      );
+      await fetchProspects();
+    } catch (err: any) {
+      setAutoResultMsg(`❌ Error: ${err.message}`);
+    } finally {
+      setAutoSearching(false);
+    }
   };
 
   const handleStatusChange = async (
@@ -344,14 +378,26 @@ export default function ProspectsAdmin() {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAutoSearch(!showAutoSearch);
+                  setShowBulk(false);
+                  setShowAdd(false);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-xs font-bold text-blue-300 border border-blue-400/40 cursor-pointer"
+              >
+                🔍 Auto-Buscar Agencias
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   setShowBulk(!showBulk);
                   setShowAdd(false);
+                  setShowAutoSearch(false);
                 }}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-white/10"
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-white/10 cursor-pointer"
               >
                 📥 Importar lote
               </button>
@@ -360,13 +406,64 @@ export default function ProspectsAdmin() {
                 onClick={() => {
                   setShowAdd(!showAdd);
                   setShowBulk(false);
+                  setShowAutoSearch(false);
                 }}
-                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950"
+                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 cursor-pointer"
               >
                 + Añadir agencia
               </button>
             </div>
           </div>
+
+          {/* Auto-Buscador de Agencias (Flujo A integrado) */}
+          {showAutoSearch && (
+            <form
+              onSubmit={handleAutoSearch}
+              className="bg-blue-950/30 border border-blue-400/30 rounded-xl p-4 space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold text-blue-200">
+                    🤖 Buscador Automático de Inmobiliarias (Flujo A integrado)
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Rastrea webs de inmobiliarias reales de la zona, extrae sus teléfonos y emails corporativos y las guarda sin duplicados.
+                  </p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  required
+                  value={autoCiudad}
+                  onChange={(e) => setAutoCiudad(e.target.value)}
+                  placeholder="Ciudad (ej. Sabadell o Terrassa)"
+                  className="px-3 py-2 bg-slate-950 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-blue-400"
+                />
+                <input
+                  type="text"
+                  value={autoCp}
+                  onChange={(e) => setAutoCp(e.target.value)}
+                  placeholder="Código Postal (ej. 08201)"
+                  className="px-3 py-2 bg-slate-950 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-blue-400"
+                />
+                <button
+                  type="submit"
+                  disabled={autoSearching}
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  {autoSearching
+                    ? "⏳ Buscando webs y contactos (~6s)..."
+                    : "🚀 Buscar y Guardar Agencias"}
+                </button>
+              </div>
+              {autoResultMsg && (
+                <p className="text-xs text-slate-200 bg-slate-950/80 border border-white/10 rounded-lg px-3 py-2">
+                  {autoResultMsg}
+                </p>
+              )}
+            </form>
+          )}
 
           {/* Form Añadir individual */}
           {showAdd && (
@@ -504,7 +601,11 @@ export default function ProspectsAdmin() {
                             <div className="text-[11px] text-slate-400">{p.persona_contacto}</div>
                           )}
                           <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300">
-                            {p.origen === "landing_inmobiliarias" ? "🌐 Landing B2B" : p.origen || "Manual"}
+                            {p.origen === "landing_inmobiliarias"
+                              ? "🌐 Landing B2B"
+                              : p.origen === "auto_buscador"
+                              ? "🤖 Auto-Buscador"
+                              : p.origen || "Manual"}
                           </span>
                           {p.notas && (
                             <p className="text-[11px] text-slate-400 mt-1 max-w-xs truncate" title={p.notas}>
