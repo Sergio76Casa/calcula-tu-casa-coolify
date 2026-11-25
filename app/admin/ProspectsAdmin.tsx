@@ -19,6 +19,7 @@ export interface ProspectItem {
 }
 
 type TemplateKey = "trojan" | "cold" | "followup";
+type MsgLang = "es" | "ca" | "en";
 
 const STATUS_META: Record<
   NonNullable<ProspectItem["estado"]>,
@@ -46,25 +47,102 @@ const STATUS_META: Record<
   },
 };
 
+function isMobilePhone(phone?: string): boolean {
+  if (!phone) return false;
+  const digits = phone.replace(/[^\d]/g, "");
+  if (!digits) return false;
+  const local = digits.replace(/^34(?=\d{9}$)/, "");
+  // En España, 8xx y 9xx son teléfonos fijos -> no tienen WhatsApp
+  if (/^[89]\d{8}$/.test(local)) return false;
+  // Móviles de España (6xx y 7xx de 9 dígitos)
+  if (/^[67]\d{8}$/.test(local)) return true;
+  // Otros móviles internacionales
+  return digits.length >= 10 && !/^34[89]/.test(digits);
+}
+
 function cleanWaPhone(phone: string): string {
   const digits = phone.replace(/[^\d]/g, "");
-  if (digits.length === 9 && /^[6789]/.test(digits)) {
+  if (digits.length === 9 && /^[67]/.test(digits)) {
     return `34${digits}`;
   }
   return digits;
 }
 
-function buildMessage(template: TemplateKey, p: ProspectItem): { subject: string; body: string } {
+function buildMessage(
+  template: TemplateKey,
+  msgLang: MsgLang,
+  p: ProspectItem
+): { subject: string; body: string } {
   const nombre = p.persona_contacto || p.nombre_agencia;
-  const zona = [p.codigo_postal, p.ciudad].filter(Boolean).join(" ") || "tu zona";
+  const fallbackZona = msgLang === "ca" ? "la teva zona" : msgLang === "en" ? "your area" : "tu zona";
+  const zona = [p.codigo_postal, p.ciudad].filter(Boolean).join(" ") || fallbackZona;
+  const landingUrl = `https://calculatucasa.com/inmobiliarias?lang=${msgLang}`;
 
+  if (msgLang === "ca") {
+    if (template === "trojan") {
+      return {
+        subject: `Propietari interessat a vendre a ${zona}`,
+        body:
+          `Hola ${nombre}, t'escric des de CalculaTuCasa.com.\n\n` +
+          `Tenim un propietari a ${zona} que acaba de valorar el seu habitatge i ha indicat intenció de vendre en 1-3 mesos.\n\n` +
+          `Us interessa que us passi la seva fitxa completa (telèfon, adreça, m² i valoració) gratis com a prova perquè comproveu com treballem?\n\n` +
+          `Més info: ${landingUrl}`,
+      };
+    }
+    if (template === "followup") {
+      return {
+        subject: `Última plaça exclusiva per a ${zona}`,
+        body:
+          `Hola ${nombre}, aquesta setmana tanquem l'exclusivitat de leads de propietaris per a ${zona} a CalculaTuCasa.com.\n\n` +
+          `Si voleu rebre un lead de prova sense compromís abans d'assignar-lo a una altra immobiliària de la zona, podeu veure-ho aquí: ${landingUrl}`,
+      };
+    }
+    return {
+      subject: `Propietaris que volen vendre a ${zona}`,
+      body:
+        `Hola ${nombre}, sóc de CalculaTuCasa.com.\n\n` +
+        `Captem propietaris a ${zona} que taxen el seu habitatge amb IA i filtrem la seva urgència de venda. Treballem en exclusiva per codi postal i entreguem la fitxa a l'instant per Telegram o WhatsApp.\n\n` +
+        `Aquí pots veure un exemple i demanar 1 lead de prova gratis: ${landingUrl}`,
+    };
+  }
+
+  if (msgLang === "en") {
+    if (template === "trojan") {
+      return {
+        subject: `Homeowner looking to sell in ${zona}`,
+        body:
+          `Hi ${nombre}, I'm reaching out from CalculaTuCasa.com.\n\n` +
+          `We have a homeowner in ${zona} who just valued their property and indicated they want to sell within 1-3 months.\n\n` +
+          `Would you like us to send you their full profile (phone, address, sqm and valuation) as a free trial lead so you can see how we work?\n\n` +
+          `More info: ${landingUrl}`,
+      };
+    }
+    if (template === "followup") {
+      return {
+        subject: `Last exclusive spot for ${zona}`,
+        body:
+          `Hi ${nombre}, this week we are closing the postal code exclusivity for homeowner leads in ${zona} at CalculaTuCasa.com.\n\n` +
+          `If you'd like to receive a free trial lead with no obligation before we assign the area to another agency, check it out here: ${landingUrl}`,
+      };
+    }
+    return {
+      subject: `Homeowners looking to sell in ${zona}`,
+      body:
+        `Hi ${nombre}, I'm from CalculaTuCasa.com.\n\n` +
+        `We capture homeowners in ${zona} who value their property with our AI and qualify their selling urgency. We work with postal code exclusivity and deliver the full profile instantly via Telegram or WhatsApp.\n\n` +
+        `See a sample and request 1 free trial lead here: ${landingUrl}`,
+    };
+  }
+
+  // Default: Español ("es")
   if (template === "trojan") {
     return {
       subject: `Propietario interesado en vender en ${zona}`,
       body:
         `Hola ${nombre}, te escribo desde CalculaTuCasa.com.\n\n` +
         `Tenemos un propietario en ${zona} que acaba de valorar su vivienda y ha indicado intención de vender en 1-3 meses.\n\n` +
-        `¿Os interesa que os pase su ficha completa (teléfono, dirección, m² y valoración) gratis como prueba para que comprobéis cómo trabajamos?`,
+        `¿Os interesa que os pase su ficha completa (teléfono, dirección, m² y valoración) gratis como prueba para que comprobéis cómo trabajamos?\n\n` +
+        `Más info: ${landingUrl}`,
     };
   }
   if (template === "followup") {
@@ -72,7 +150,7 @@ function buildMessage(template: TemplateKey, p: ProspectItem): { subject: string
       subject: `Última plaza exclusiva para ${zona}`,
       body:
         `Hola ${nombre}, esta semana cerramos la exclusividad de leads de propietarios para ${zona} en CalculaTuCasa.com.\n\n` +
-        `Si queréis recibir un lead de prueba sin compromiso antes de asignarlo a otra inmobiliaria de la zona, podéis verlo aquí: https://calculatucasa.com/inmobiliarias`,
+        `Si queréis recibir un lead de prueba sin compromiso antes de asignarlo a otra inmobiliaria de la zona, podéis verlo aquí: ${landingUrl}`,
     };
   }
   return {
@@ -80,7 +158,7 @@ function buildMessage(template: TemplateKey, p: ProspectItem): { subject: string
     body:
       `Hola ${nombre}, soy de CalculaTuCasa.com.\n\n` +
       `Captamos propietarios en ${zona} que tasan su vivienda con IA y filtramos su urgencia de venta. Trabajamos en exclusiva por código postal y entregamos la ficha al instante por Telegram o WhatsApp.\n\n` +
-      `Aquí puedes ver un ejemplo y pedir 1 lead de prueba gratis: https://calculatucasa.com/inmobiliarias`,
+      `Aquí puedes ver un ejemplo y pedir 1 lead de prueba gratis: ${landingUrl}`,
   };
 }
 
@@ -91,6 +169,7 @@ export default function ProspectsAdmin() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [template, setTemplate] = useState<TemplateKey>("trojan");
+  const [msgLang, setMsgLang] = useState<MsgLang>("ca");
 
   // Form manual / lote / auto-buscador
   const [showAdd, setShowAdd] = useState(false);
@@ -376,6 +455,16 @@ export default function ProspectsAdmin() {
                 <option value="cold">Plantilla: Primer contacto frío</option>
                 <option value="followup">Plantilla: Último aviso exclusividad</option>
               </select>
+              <select
+                value={msgLang}
+                onChange={(e) => setMsgLang(e.target.value as MsgLang)}
+                title="Idioma del mensaje y del enlace a /inmobiliarias"
+                className="px-3 py-1.5 bg-slate-950 border border-emerald-400/30 rounded-lg text-xs text-emerald-200 font-semibold outline-none"
+              >
+                <option value="ca">Idioma msg: Català (CA)</option>
+                <option value="es">Idioma msg: Castellano (ES)</option>
+                <option value="en">Idioma msg: English (EN)</option>
+              </select>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -585,10 +674,12 @@ export default function ProspectsAdmin() {
                   {filtered.map((p) => {
                     const st = p.estado || "pendiente";
                     const meta = STATUS_META[st] || STATUS_META.pendiente;
-                    const msg = buildMessage(template, p);
-                    const waHref = p.telefono
-                      ? `https://wa.me/${cleanWaPhone(p.telefono)}?text=${encodeURIComponent(msg.body)}`
-                      : null;
+                    const msg = buildMessage(template, msgLang, p);
+                    const hasMobile = isMobilePhone(p.telefono);
+                    const waHref =
+                      p.telefono && hasMobile
+                        ? `https://wa.me/${cleanWaPhone(p.telefono)}?text=${encodeURIComponent(msg.body)}`
+                        : null;
                     const mailHref = p.email
                       ? `mailto:${p.email}?subject=${encodeURIComponent(msg.subject)}&body=${encodeURIComponent(msg.body)}`
                       : null;
@@ -622,7 +713,14 @@ export default function ProspectsAdmin() {
                           )}
                         </td>
                         <td className="py-3 px-3 align-top text-slate-300 space-y-0.5">
-                          {p.telefono && <div>📞 {p.telefono}</div>}
+                          {p.telefono && (
+                            <div>
+                              {hasMobile ? "📱" : "☎️"} {p.telefono}
+                              {!hasMobile && (
+                                <span className="ml-1 text-[10px] text-slate-500">(fijo)</span>
+                              )}
+                            </div>
+                          )}
                           {p.email && <div className="text-[11px] text-slate-400">✉️ {p.email}</div>}
                           {p.web && (
                             <a

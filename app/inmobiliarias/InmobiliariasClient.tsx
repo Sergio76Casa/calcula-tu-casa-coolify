@@ -5,6 +5,10 @@ import Link from "next/link";
 import type { Lang } from "@/lib/translations";
 
 function detectLang(): Lang {
+  if (typeof window !== "undefined") {
+    const param = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
+    if (param === "ca" || param === "es" || param === "en") return param;
+  }
   if (typeof navigator === "undefined") return "es";
   const code = navigator.language.toLowerCase();
   if (code.startsWith("ca")) return "ca";
